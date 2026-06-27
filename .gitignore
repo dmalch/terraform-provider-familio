@@ -1,0 +1,17 @@
+# Build artifacts
+/terraform-provider-familio
+*.exe
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Local dev overrides
+.terraformrc
+terraform.rc
+
+# OS / editor
+.DS_Store
