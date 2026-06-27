@@ -1,3 +1,21 @@
+## 0.4.0
+
+FEATURES:
+
+* **New resource `familio_event`** — a single-subject life-fact event on a person, covering the
+  long tail of familio's ~50-type event catalogue (residence/`location`, `profession`,
+  `education`, `militaryService`, `militaryAward`, `award`, `citizenship`, `emigration`,
+  `burial`, …). Attributes: `person`, `type` (validated against the catalogue), `date`, optional
+  `end_date` (making the event a date range), and a free-text `comment`. Imported by
+  `"<person_uuid>:<event_uuid>"`. birth/death/baptism (on `familio_person`), marriages
+  (`familio_marriage`) and the two-participant godparent/warranter events are intentionally not
+  handled here, so resources never contend for the same event.
+
+NOTES:
+
+* `familio` has no in-place event edit, so changing any `familio_event` attribute forces
+  replacement (Terraform deletes and recreates the underlying event).
+
 ## 0.3.0
 
 FEATURES:

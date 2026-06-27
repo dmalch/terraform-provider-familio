@@ -14,6 +14,7 @@ import (
 	"github.com/dmalch/terraform-provider-familio/internal/config"
 	dsperson "github.com/dmalch/terraform-provider-familio/internal/datasource/settlementpersons"
 	"github.com/dmalch/terraform-provider-familio/internal/familio"
+	"github.com/dmalch/terraform-provider-familio/internal/resource/event"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/marriage"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/person"
 )
@@ -43,7 +44,7 @@ func (p *FamilioProvider) Metadata(_ context.Context, _ provider.MetadataRequest
 
 func (p *FamilioProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manage persons and marriages on familio.org. " +
+		Description: "Manage persons, marriages and life events on familio.org. " +
 			"Unofficial — not affiliated with, endorsed, or sponsored by Familio.",
 		Attributes: map[string]schema.Attribute{
 			"cookie": schema.StringAttribute{
@@ -132,6 +133,7 @@ func (p *FamilioProvider) Resources(_ context.Context) []func() resource.Resourc
 	return []func() resource.Resource{
 		person.NewPersonResource,
 		marriage.NewMarriageResource,
+		event.NewEventResource,
 	}
 }
 

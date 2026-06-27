@@ -18,6 +18,7 @@ from the tree editor (see [`internal/familio/API.md`](internal/familio/API.md)).
 | `familio_settlement_persons` data source (list a settlement's persons) | ✅ works |
 | `familio_person` — full CRUD + import (incl. parents) | ✅ works |
 | `familio_marriage` — full CRUD + import | ✅ works |
+| `familio_event` — life-fact events (residence, education, military, …) | ✅ works |
 
 `familio_marriage` is an association resource: a marriage is the `wedding` event linking
 two persons. Birth, death and christening (baptism / «Крещение») are life facts folded into
@@ -69,6 +70,15 @@ resource "familio_person" "pyotr" {
   gender     = "male"
   birth_date = { year = 1878 }
   parents    = [familio_person.ivan.uuid, familio_person.maria.uuid]
+}
+
+# A life-fact event (here: a residence over a date range).
+resource "familio_event" "ivan_residence" {
+  person   = familio_person.ivan.uuid
+  type     = "location"
+  date     = { year = 1878 }
+  end_date = { year = 1890 }
+  comment  = "Москва"
 }
 ```
 

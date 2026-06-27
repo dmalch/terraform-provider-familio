@@ -33,6 +33,7 @@ const (
 
 	calendarGregorian = "gregorian"
 	dateTypeEqual     = "equal"
+	dateTypeBetween   = "between"
 )
 
 // BasicFields are the editable name/gender/privacy fields of a tree person —

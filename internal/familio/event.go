@@ -18,6 +18,59 @@ func WeddingEvent(date *DatePart, partnerA, partnerB string) Event {
 	}
 }
 
+// FactEventTypes is the set of single-subject "fact" event types a familio_event
+// resource may carry (role "owner"). It deliberately EXCLUDES the events managed
+// by dedicated surfaces — birth/death/baptism (folded into familio_person),
+// wedding/divorce/affiance/nikah (relationships), and the two-participant
+// godparent/warranter — so the two never fight over one event. Source: the
+// editor's event catalogue (internal/familio/API.md).
+var FactEventTypes = []string{
+	"arrest", "barMitzvah", "batMitzvah", "blessing", "militaryAward", "militaryService",
+	"citizenship", "titleOfNobility", "demobilization", "immigration", "naming", "confirmation",
+	"concentrationCamp", "location", "award", "education", "circumcision", "condemnation",
+	"sentenceServing", "reburial", "militaryRankObtaining", "captured", "ordination", "burial",
+	"conscription", "missing", "profession", "convictRehabilitation", "renaming", "resurnaming",
+	"crime", "hajj", "exhumation", "emigration", "injury", "travel", "pilgrimage", "collectiveFarm",
+	"party", "evacuation", "scienceDegree", "dekulakization", "treatment", "combat",
+	"militaryCemetery", "heroicAct", "reference",
+}
+
+// MakeDate builds a complex date: a single "equal" date when second is nil, or a
+// "between" range when both endpoints are set.
+func MakeDate(first, second *DatePart) EventDate {
+	if second == nil {
+		return equalDate(first)
+	}
+	if first != nil && first.Type == "" {
+		first.Type = calendarGregorian
+	}
+	if second.Type == "" {
+		second.Type = calendarGregorian
+	}
+	return EventDate{Calendar: calendarGregorian, Type: dateTypeBetween, First: first, Second: second}
+}
+
+// FactEvent builds a single-subject fact event (role "owner") of the given type
+// for ownerRef, with a free-text comment.
+func FactEvent(eventType string, date EventDate, ownerRef, comment string) Event {
+	return Event{
+		Type:         eventType,
+		Date:         date,
+		Participants: []Participant{{PersonUUID: ownerRef, Role: RoleOwner}},
+		Comment:      comment,
+	}
+}
+
+// FindByID returns the event with the given uuid, or nil.
+func FindByID(events []Event, uuid string) *Event {
+	for i := range events {
+		if events[i].ID() == uuid {
+			return &events[i]
+		}
+	}
+	return nil
+}
+
 // CreateEvent posts a life event anchored on a person
 // (POST /api/v2/persons/<uuid>/events). The event is visible on every
 // participant's /events; anchor on any participant. Returns the created event
