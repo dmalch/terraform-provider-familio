@@ -99,28 +99,56 @@ Response `201` → `{ basic:{ uuid, displayName, firstName, lastName, middleName
 - `GET /api/v2/persons/<uuid>/basic` → `{ uuid, createdAt, updatedAt, gender, privacy, firstName, lastName, middleName, birthLastName, birthFirstName }` — the edit-form source.
 - `GET /api/v2/persons/<uuid>/events` → `[{ uuid, type, date, settlement, comment, participants, … }]`.
 
-### Update — `PUT /api/v2/persons/<uuid>/basic`
-Endpoint+method confirmed (returns **400 validation**, not 404/500, when the body is close).
-Body = the `/basic` fields (firstName/lastName/middleName/birthFirstName/birthLastName/gender/privacy).
-**Optimistic-locking gotcha:** requires a *"дата последнего обновления информации"* (last-update
-timestamp) field for concurrency — echoing back `updatedAt` from `GET /basic` was NOT accepted, so
-the exact field key is still unknown (the only remaining gap). ⇒ provider Update must: GET `/basic`,
-send fields back + the concurrency token. Events (dates/places) are updated separately under
-`/api/v2/persons/<uuid>/events…` (shape TBD).
+### Update — `PUT /api/v2/persons/<uuid>/basic` → 200 (CONFIRMED, captured)
+Body:
+```jsonc
+{ "firstName":"…", "lastName":"…", "middleName":"…", "birthFirstName":"", "birthLastName":"",
+  "gender":"female", "privacy":"invisible",
+  "timestamp":"2026-06-27T10:05:45+00:00",   // ⚠ optimistic-lock token = the last-known updatedAt/createdAt
+  "uuid":"<uuid>" }
+```
+**Concurrency gotcha:** the lock field is **`timestamp`** (NOT `updatedAt`), value = the `updatedAt`
+you last read from `GET /basic`. A stale/missing `timestamp` → 400 «Не указана дата последнего
+обновления информации». Response echoes the new `/basic` with a bumped `updatedAt`. ⇒ provider Update:
+`GET /basic` → send fields + `timestamp = updatedAt` + `uuid`. (Editing the photo also fires
+`DELETE /api/v2/persons/<uuid>/photo`.)
 
 ### Delete — `DELETE /api/v2/persons/<uuid>` → 204. Confirmed.
+
+### Relationships are EVENTS, not a union resource (CONFIRMED, captured) ⭐
+Familio has **no `union` resource**. Kinship is modelled as **events with `participants[]`**:
+- **Marriage/partnership** = a `wedding` event with two `spouse` participants:
+  `{"type":"wedding","date":{…},"participants":[{"personUuid":"<A>","role":"spouse"},{"personUuid":"<B>","role":"spouse"}],"settlement":null,"comment":""}`
+- **Parent↔child** = a `birth` event whose participants include the parent(s) + the child:
+  `participants:[{personUuid:"<father>",role:"father"},{personUuid:"<mother>",role:"mother"},{personUuid:"<child>",role:"child"}]` (roles seen: `child`, `owner`, `spouse`; father/mother inferred).
+- `"personUuid":"self"` = placeholder for the person being created in the **same** `POST /api/v2/persons` request.
+
+The tree UI's **"+ Муж/Жена/Отец/Мать/Сын/Дочь"** all route to
+`POST /api/v2/persons/new/simple/<existingUuid>?role=spouse|parent|child&gender=…` which submits a
+normal `POST /api/v2/persons?owner=<userId>` whose `events[]` carries the relating event (wedding with
+the existing person as the other `spouse`, or birth with the existing person as parent/child). So
+**creating a related person + the link is one atomic person-create.**
+
+⇒ Provider modelling: there is no `familio_union`. Either (a) a `familio_marriage`/`familio_event`
+resource that POSTs a `wedding` event between two existing persons, or (b) fold relationships into
+`familio_person` (parents/spouse attributes). **Open:** linking two *already-existing* persons (no new
+person) → almost certainly `POST/PUT /api/v2/persons/<uuid>/events` with the event body above (the
+`/events` GET sub-resource exists); needs one confirming capture/probe.
 
 ### Dates
 `{ calendar:"gregorian"|"julian", type:"equal"|"exact"|…, first:{day,month,year,type}|null, second:null }`;
 `formatted` is server-computed (`"Неизвестно"` when empty). Validate via
 `PUT /api/v2/validate/complex-date` (204 = ok). Surnames: `POST /api/v2/surnames/validate` `{surname}` (204).
 
-## Remaining gaps (need 1–2 more captures)
+## Remaining gaps (minor)
 
-1. **Update concurrency field** — the exact key for the last-update timestamp in `PUT /…/basic`.
-2. **Union / relationships** — adding a spouse/parent/child link (the tree's "Добавить родственника"
-   flow). Not yet captured. Likely a separate endpoint; events already carry `participants[].role`
-   (`child`/`owner`/…), so partnerships may be modeled via shared events or a dedicated relatives endpoint.
+1. **Link two already-existing persons** (marriage/parent-child without creating a new person) — the
+   confirmed flows all create a new related person in one POST. The existing-person link is almost
+   certainly `POST/PUT /api/v2/persons/<uuid>/events` with a `wedding`/`birth` event; one short
+   capture/probe to confirm.
+2. **Event update/delete** (edit a date/place, dissolve a marriage) — `…/events/<eventUuid>` shape.
+3. **Token refresh** — JWT lasts ~30 days; provider should re-scrape `__NEXT_DATA__.token` from a
+   page fetch when expired.
 
 ## Capture recipe (browser)
 
