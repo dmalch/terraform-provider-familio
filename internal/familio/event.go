@@ -55,3 +55,39 @@ func (e *Event) SpouseUUIDs() []string {
 	}
 	return out
 }
+
+// ParentUUIDs returns the personUuids of an event's parent participants.
+func (e *Event) ParentUUIDs() []string {
+	var out []string
+	for _, p := range e.Participants {
+		if p.Role == RoleParent {
+			out = append(out, p.PersonUUID)
+		}
+	}
+	return out
+}
+
+// hasChild reports whether personUUID is the child participant of the event.
+func (e *Event) hasChild(personUUID string) bool {
+	for _, p := range e.Participants {
+		if p.Role == RoleChild && p.PersonUUID == personUUID {
+			return true
+		}
+	}
+	return false
+}
+
+// OwnBirthEvent returns the birth event in which personUUID is the child — the
+// person's *own* birth. A person who is also a parent has the births of their
+// children on their /events too (where they are the parent), so a plain
+// type-filter is not enough. Returns nil when there is no such event yet. On a
+// create read-back the child participant carries the resolved uuid, so passing
+// the new uuid works there too.
+func OwnBirthEvent(events []Event, personUUID string) *Event {
+	for i := range events {
+		if events[i].Type == EventBirth && events[i].hasChild(personUUID) {
+			return &events[i]
+		}
+	}
+	return nil
+}

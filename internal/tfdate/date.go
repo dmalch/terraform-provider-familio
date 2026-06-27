@@ -32,16 +32,21 @@ var AttrTypes = map[string]attr.Type{
 	"day":   types.Int64Type,
 }
 
-// Block builds a nested {year, month, day} date attribute. Changing a date
-// forces replacement: editing existing events is not yet implemented, so the
-// only way to change a date today is to recreate the owning resource.
-func Block(desc string) schema.SingleNestedAttribute {
+// Block builds a nested {year, month, day} date attribute. When requiresReplace
+// is true, changing the date forces replacement of the owning resource (used
+// where the underlying event cannot be edited in place — e.g. the marriage
+// resource). When false, the date is edited in place by the owning resource's
+// Update (the person resource rebuilds its birth/death event).
+func Block(desc string, requiresReplace bool) schema.SingleNestedAttribute {
+	var mods []planmodifier.Object
+	if requiresReplace {
+		desc += " Changing it forces a new resource (event editing is not yet supported)."
+		mods = append(mods, objectplanmodifier.RequiresReplace())
+	}
 	return schema.SingleNestedAttribute{
-		Description: desc + " Changing it forces a new resource (event editing is not yet supported).",
-		Optional:    true,
-		PlanModifiers: []planmodifier.Object{
-			objectplanmodifier.RequiresReplace(),
-		},
+		Description:   desc,
+		Optional:      true,
+		PlanModifiers: mods,
 		Attributes: map[string]schema.Attribute{
 			"year": schema.Int64Attribute{
 				Description: "Year (e.g. 1900).",

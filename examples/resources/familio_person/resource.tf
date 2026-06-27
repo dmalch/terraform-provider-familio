@@ -29,3 +29,23 @@ resource "familio_person" "maria" {
     year = 1855
   }
 }
+
+# A child linked to both parents. The parents set (0–2 person UUIDs) is stored on
+# the child's birth event; order does not matter and a parent's father/mother
+# role is inferred from their own gender. Parents (and the birth date) can be
+# changed in place — editing them does not recreate the person.
+resource "familio_person" "pyotr" {
+  first_name = "Пётр"
+  last_name  = "Иванов"
+  patronymic = "Иванович"
+  gender     = "male"
+
+  birth_date = {
+    year = 1878
+  }
+
+  parents = [
+    familio_person.ivan.uuid,
+    familio_person.maria.uuid,
+  ]
+}

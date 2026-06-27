@@ -22,6 +22,7 @@ const (
 	EventWedding = "wedding"
 
 	RoleChild  = "child"
+	RoleParent = "parent"
 	RoleOwner  = "owner"
 	RoleSpouse = "spouse"
 
@@ -119,14 +120,6 @@ type personCreateBody struct {
 	Biography *string     `json:"biography"`
 }
 
-// basicUpdateBody is the (flat) PUT /persons/<uuid>/basic request: the basic
-// fields plus the optimistic-lock token and the target uuid.
-type basicUpdateBody struct {
-	BasicFields
-	Timestamp string `json:"timestamp"`
-	UUID      string `json:"uuid"`
-}
-
 // createResponse is the 201 body of POST /persons.
 type createResponse struct {
 	Basic  BasicRecord `json:"basic"`
@@ -149,23 +142,41 @@ func equalDate(first *DatePart) EventDate {
 	return EventDate{Calendar: calendarGregorian, Type: dateTypeEqual, First: first}
 }
 
+// BirthEvent builds a birth event for childRef (SelfRef when the child is being
+// created in the same POST /persons request, or the child's uuid when rebuilding
+// an existing person's birth event), attaching 0–2 parent persons (role
+// "parent"). familio upserts a person's single birth event by its child
+// participant, so POSTing this event replaces the whole event (participants +
+// date) in place — that is how parents are added/removed and the birth date is
+// edited without recreating the person.
+func BirthEvent(date *DatePart, childRef string, parents []string) Event {
+	parts := []Participant{{PersonUUID: childRef, Role: RoleChild}}
+	for _, p := range parents {
+		parts = append(parts, Participant{PersonUUID: p, Role: RoleParent})
+	}
+	return Event{Type: EventBirth, Date: equalDate(date), Participants: parts}
+}
+
 // SelfBirthEvent builds the mandatory birth event for the person being created.
 // Pass nil for an unknown date.
 func SelfBirthEvent(date *DatePart) Event {
+	return BirthEvent(date, SelfRef, nil)
+}
+
+// DeathEvent builds a death event owned by ownerRef (SelfRef on create, or the
+// person's uuid when upserting an existing person's death event). Like the birth
+// event, re-POSTing it replaces the person's single death event in place.
+func DeathEvent(date *DatePart, ownerRef string) Event {
 	return Event{
-		Type:         EventBirth,
+		Type:         EventDeath,
 		Date:         equalDate(date),
-		Participants: []Participant{{PersonUUID: SelfRef, Role: RoleChild}},
+		Participants: []Participant{{PersonUUID: ownerRef, Role: RoleOwner}},
 	}
 }
 
 // SelfDeathEvent builds an optional death event for the person being created.
 func SelfDeathEvent(date *DatePart) Event {
-	return Event{
-		Type:         EventDeath,
-		Date:         equalDate(date),
-		Participants: []Participant{{PersonUUID: SelfRef, Role: RoleOwner}},
-	}
+	return DeathEvent(date, SelfRef)
 }
 
 // CreatePerson mints a new tree person (POST /api/v2/persons), owned by the
@@ -233,15 +244,16 @@ func (c *Client) GetPersonDisplay(ctx context.Context, uuid string) (*personDisp
 	return &d, nil
 }
 
-// UpdatePersonBasic edits a person's basic fields. timestamp is the optimistic-
-// lock token (the updatedAt last read from GetPersonBasic); a stale value is
-// rejected with HTTP 400. Returns the refreshed basic record.
-func (c *Client) UpdatePersonBasic(ctx context.Context, uuid string, fields BasicFields, timestamp string) (*BasicRecord, error) {
-	body := basicUpdateBody{BasicFields: fields, Timestamp: timestamp, UUID: uuid}
-	req, err := c.newAuthedRequest(ctx, http.MethodPut, "persons/"+uuid+"/basic", nil, body)
+// UpdatePersonBasic edits a person's basic fields. version is the optimistic-
+// lock token (the updatedAt last read from GetPersonBasic), sent in the
+// X-Base-Version header that familio's editor uses; a stale value is rejected
+// with HTTP 409. Returns the refreshed basic record.
+func (c *Client) UpdatePersonBasic(ctx context.Context, uuid string, fields BasicFields, version string) (*BasicRecord, error) {
+	req, err := c.newAuthedRequest(ctx, http.MethodPut, "persons/"+uuid+"/basic", nil, fields)
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("X-Base-Version", version)
 	var rec BasicRecord
 	if err := c.do(req, &rec); err != nil {
 		return nil, err

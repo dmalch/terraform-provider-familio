@@ -16,13 +16,16 @@ from the tree editor (see [`internal/familio/API.md`](internal/familio/API.md)).
 | Capability | Status |
 |---|---|
 | `familio_settlement_persons` data source (list a settlement's persons) | ✅ works |
-| `familio_person` — full CRUD + import | ✅ works |
+| `familio_person` — full CRUD + import (incl. parents) | ✅ works |
 | `familio_marriage` — full CRUD + import | ✅ works |
 
 `familio_marriage` is an association resource: a marriage is the `wedding` event linking
-two persons. Birth and death are life facts folded into `familio_person`. Editing an
-existing event's date in place is not yet supported, so changing a birth/death/marriage
-date forces replacement.
+two persons. Birth and death are life facts folded into `familio_person`, and a person's
+**parents** are managed there too via the `parents` set (0–2 person UUIDs) — familio stores
+them as gender-agnostic participants on the child's birth event, so the role (father/mother)
+is inferred from each parent's own gender. Birth/death dates and parents are edited **in
+place** on `familio_person`. Editing a **marriage** date or its partners still forces
+replacement (event editing there is not yet implemented).
 
 ## Using the provider
 
@@ -56,6 +59,15 @@ resource "familio_person" "maria" {
 resource "familio_marriage" "ivan_maria" {
   partners      = [familio_person.ivan.uuid, familio_person.maria.uuid]
   marriage_date = { year = 1875 }
+}
+
+# Their child, linked to both parents.
+resource "familio_person" "pyotr" {
+  first_name = "Пётр"
+  last_name  = "Иванов"
+  gender     = "male"
+  birth_date = { year = 1878 }
+  parents    = [familio_person.ivan.uuid, familio_person.maria.uuid]
 }
 ```
 

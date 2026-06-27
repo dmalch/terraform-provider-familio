@@ -2,8 +2,10 @@ package person
 
 import (
 	"context"
+	"sort"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/dmalch/terraform-provider-familio/internal/familio"
@@ -66,6 +68,71 @@ func TestEventsFromModelWithDates(t *testing.T) {
 	d := events[1].Date.First
 	if d == nil || d.Year != 1971 || d.Month != nil || d.Day != nil {
 		t.Errorf("death date wrong (year only expected): %+v", d)
+	}
+}
+
+func TestEventsFromModelWithParents(t *testing.T) {
+	parents := types.SetValueMust(types.StringType, []attr.Value{
+		types.StringValue("uuid-dad"), types.StringValue("uuid-mom"),
+	})
+	m := &ResourceModel{
+		Gender:    types.StringValue(familio.GenderMale),
+		BirthDate: types.ObjectNull(tfdate.AttrTypes),
+		DeathDate: types.ObjectNull(tfdate.AttrTypes),
+		Parents:   parents,
+	}
+	events, diags := eventsFromModel(context.Background(), m)
+	if diags.HasError() {
+		t.Fatalf("unexpected diags: %v", diags)
+	}
+	if len(events) != 1 || events[0].Type != familio.EventBirth {
+		t.Fatalf("want one birth event, got %+v", events)
+	}
+	// child=self plus the two parents.
+	var child string
+	got := events[0].ParentUUIDs()
+	for _, p := range events[0].Participants {
+		if p.Role == familio.RoleChild {
+			child = p.PersonUUID
+		}
+	}
+	if child != familio.SelfRef {
+		t.Errorf("child participant = %q, want %q", child, familio.SelfRef)
+	}
+	sort.Strings(got)
+	if len(got) != 2 || got[0] != "uuid-dad" || got[1] != "uuid-mom" {
+		t.Errorf("parent participants = %v, want [uuid-dad uuid-mom]", got)
+	}
+}
+
+func TestApplyParentsToState(t *testing.T) {
+	const childUUID = "uuid-child"
+	events := []familio.Event{
+		// The child's own birth event (this is what we read parents from).
+		familio.BirthEvent(nil, childUUID, []string{"uuid-mom", "uuid-dad"}),
+		// A child of this person's — present on /events but with role "parent"
+		// for childUUID, so it must be ignored when reading childUUID's parents.
+		familio.BirthEvent(nil, "uuid-grandchild", []string{childUUID}),
+	}
+	m := &ResourceModel{UUID: types.StringValue(childUUID)}
+	if diags := applyParentsToState(context.Background(), events, m); diags.HasError() {
+		t.Fatalf("unexpected diags: %v", diags)
+	}
+	var ids []string
+	if diags := m.Parents.ElementsAs(context.Background(), &ids, false); diags.HasError() {
+		t.Fatalf("unexpected diags: %v", diags)
+	}
+	sort.Strings(ids)
+	if len(ids) != 2 || ids[0] != "uuid-dad" || ids[1] != "uuid-mom" {
+		t.Errorf("parents = %v, want [uuid-dad uuid-mom]", ids)
+	}
+
+	// No parents ⇒ null (matches an omitted config).
+	none := []familio.Event{familio.BirthEvent(nil, childUUID, nil)}
+	m2 := &ResourceModel{UUID: types.StringValue(childUUID)}
+	applyParentsToState(context.Background(), none, m2)
+	if !m2.Parents.IsNull() {
+		t.Errorf("0 parents should produce a null set, got %v", m2.Parents)
 	}
 }
 

@@ -17,6 +17,7 @@ type ResourceModel struct {
 	Privacy        types.String `tfsdk:"privacy"`
 	BirthDate      types.Object `tfsdk:"birth_date"`
 	DeathDate      types.Object `tfsdk:"death_date"`
+	Parents        types.Set    `tfsdk:"parents"`
 	DisplayName    types.String `tfsdk:"display_name"`
 	CreatedAt      types.String `tfsdk:"created_at"`
 	UpdatedAt      types.String `tfsdk:"updated_at"`

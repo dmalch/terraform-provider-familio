@@ -37,7 +37,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					setplanmodifier.RequiresReplace(),
 				},
 			},
-			"marriage_date": tfdate.Block("Marriage date."),
+			"marriage_date": tfdate.Block("Marriage date.", true),
 
 			"created_at": schema.StringAttribute{Computed: true, Description: "Creation timestamp."},
 			"updated_at": schema.StringAttribute{Computed: true, Description: "Last update timestamp."},

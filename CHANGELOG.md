@@ -1,3 +1,27 @@
+## 0.2.0
+
+FEATURES:
+
+* **`familio_person` now manages parents:** a new `parents` set (0–2 person UUIDs) links a
+  person to their parents via the child's birth event. familio stores parents as
+  gender-agnostic participants, so the set mirrors `familio_marriage.partners` — order does
+  not matter and each parent's father/mother role is inferred from their own gender.
+
+ENHANCEMENTS:
+
+* **`familio_person` life-event dates and parents are now edited in place.** Changing
+  `birth_date`, `death_date`, or `parents` updates the person without recreating it (the birth
+  event is upserted; a removed `death_date` deletes the death event). These no longer force
+  replacement.
+
+BUG FIXES:
+
+* **Fixed `familio_person` updates of name / gender / privacy**, which previously failed with
+  HTTP 400 «Не указана дата последнего обновления информации». The optimistic-lock token is
+  sent in the `X-Base-Version` header (= the last-read `updatedAt`), not a request-body field.
+* Added `UseStateForUnknown` plan modifiers to the computed name/privacy attributes, removing
+  spurious "known after apply" diffs on unrelated updates.
+
 ## 0.1.0
 
 FEATURES:

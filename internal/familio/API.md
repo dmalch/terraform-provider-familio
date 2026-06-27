@@ -99,18 +99,19 @@ Response `201` → `{ basic:{ uuid, displayName, firstName, lastName, middleName
 - `GET /api/v2/persons/<uuid>/basic` → `{ uuid, createdAt, updatedAt, gender, privacy, firstName, lastName, middleName, birthLastName, birthFirstName }` — the edit-form source.
 - `GET /api/v2/persons/<uuid>/events` → `[{ uuid, type, date, settlement, comment, participants, … }]`.
 
-### Update — `PUT /api/v2/persons/<uuid>/basic` → 200 (CONFIRMED, captured)
-Body:
+### Update — `PUT /api/v2/persons/<uuid>/basic` → 200 (CONFIRMED, replayed) ⭐
+Body is **just the basic fields** (no token in the body):
 ```jsonc
 { "firstName":"…", "lastName":"…", "middleName":"…", "birthFirstName":"", "birthLastName":"",
-  "gender":"female", "privacy":"invisible",
-  "timestamp":"2026-06-27T10:05:45+00:00",   // ⚠ optimistic-lock token = the last-known updatedAt/createdAt
-  "uuid":"<uuid>" }
+  "gender":"female", "privacy":"invisible" }
 ```
-**Concurrency gotcha:** the lock field is **`timestamp`** (NOT `updatedAt`), value = the `updatedAt`
-you last read from `GET /basic`. A stale/missing `timestamp` → 400 «Не указана дата последнего
-обновления информации». Response echoes the new `/basic` with a bumped `updatedAt`. ⇒ provider Update:
-`GET /basic` → send fields + `timestamp = updatedAt` + `uuid`. (Editing the photo also fires
+**Concurrency gotcha (corrected):** the optimistic-lock token is the **`X-Base-Version` HTTP header**,
+NOT a body field — value = the `updatedAt` you last read from `GET /basic`. (An earlier spike note
+wrongly guessed a body `timestamp`/`uuid`; those are ignored, and without the header you get 400 «Не
+указана дата последнего обновления информации».) A stale header → **409 Conflict**. Response echoes the
+new `/basic` with a bumped `updatedAt`. The familio web editor uses the same `{"X-Base-Version": I}`
+header for `/basic`, `/biography`, and `/source` (seen in `_app` chunk). ⇒ provider Update: `GET /basic`
+→ `PUT` fields with header `X-Base-Version: <updatedAt>`. (Editing the photo also fires
 `DELETE /api/v2/persons/<uuid>/photo`.)
 
 ### Delete — `DELETE /api/v2/persons/<uuid>` → 204. Confirmed.
@@ -119,8 +120,12 @@ you last read from `GET /basic`. A stale/missing `timestamp` → 400 «Не ук
 Familio has **no `union` resource**. Kinship is modelled as **events with `participants[]`**:
 - **Marriage/partnership** = a `wedding` event with two `spouse` participants:
   `{"type":"wedding","date":{…},"participants":[{"personUuid":"<A>","role":"spouse"},{"personUuid":"<B>","role":"spouse"}],"settlement":null,"comment":""}`
-- **Parent↔child** = a `birth` event whose participants include the parent(s) + the child:
-  `participants:[{personUuid:"<father>",role:"father"},{personUuid:"<mother>",role:"mother"},{personUuid:"<child>",role:"child"}]` (roles seen: `child`, `owner`, `spouse`; father/mother inferred).
+- **Parent↔child** = a `birth` event whose participants are the **one child** plus 0–2
+  **gender-agnostic `parent`** participants (CONFIRMED — `father`/`mother` are NOT valid roles,
+  rejected «Не определена роль участника»; the parent's father/mother display is inferred from
+  that person's own gender, not the role):
+  `participants:[{personUuid:"<child>",role:"child"},{personUuid:"<parentA>",role:"parent"},{personUuid:"<parentB>",role:"parent"}]`.
+  Roles confirmed: `child`, `parent`, `owner` (death), `spouse` (wedding).
 - `"personUuid":"self"` = placeholder for the person being created in the **same** `POST /api/v2/persons` request.
 
 The tree UI's **"+ Муж/Жена/Отец/Мать/Сын/Дочь"** all route to
@@ -149,21 +154,39 @@ Standalone life events — including linking two **existing** persons:
   create (e.g. `first:{day,month,year,type:"gregorian"}` → echoes `formatted:"12.05.1875"`). The event
   shows up on **every participant's** `/events`, so anchor read/delete on any participant.
 - **Delete** `DELETE /api/v2/persons/<personUuid>/events/<eventUuid>` → **204**.
-- **Update** `PUT /api/v2/persons/<personUuid>/events/<eventUuid>` → **400** «Не указана дата
-  последнего обновления информации» — same optimistic-lock gate as person basic, but the `timestamp`
-  field that works for `/basic` does **not** satisfy it here (the key is still unknown). ⇒ the union
-  resource makes date/partners **RequiresReplace** instead of in-place updating.
+- **In-place edit via POST-upsert (CONFIRMED, replayed) ⭐** `PUT …/events/<id>` is still blocked
+  by an unknown concurrency-token field, but **you never need it**: re-`POST`ing a `birth`/`death`
+  event for a person **upserts that person's single event of that type** — it is a **full replace**
+  of participants + date, not an append. So:
+  - **Edit birth date / add / remove / change parents:** `POST /persons/<child>/events` a `birth`
+    event with `[{child, role:child}, {parent…}]` and the desired date. Whatever you send is the new
+    state (omit a parent ⇒ removed; omit the date ⇒ date cleared). The birth event count stays 1; the
+    old event uuid is replaced.
+  - **Edit / set death date:** same, `POST` a `death` event `[{person, role:owner}]` + date.
+  - **Remove the death event:** `DELETE …/events/<deathUuid>` → **204** (death is optional). The
+    **birth event is mandatory — deleting the sole birth event is `409`** («not found»), so birth is
+    upsert-only (no removal).
 
 `POST /api/v2/events` (no person prefix) → **404**; events are strictly a person sub-resource.
 
 ## Remaining gaps (minor)
 
-1. **Event in-place update** (edit a marriage/birth date without recreating) — the `PUT
-   …/events/<id>` concurrency-token field name (the `timestamp` that works for `/basic` is rejected).
+1. **Wedding-event in-place edit** — the marriage resource still uses RequiresReplace for
+   partners/date. The birth/death POST-upsert trick edits a *single-subject* event by re-posting the
+   whole event; whether re-posting a `wedding` likewise upserts (vs. creating a duplicate event) is
+   untested, so `familio_marriage` keeps RequiresReplace for now. (The `PUT …/events/<id>`
+   concurrency-token field name remains unknown but is no longer needed for births/deaths.)
 2. **Settlement on events** (place of marriage/birth) — `settlement` accepts null; setting a real
    settlement uuid is untested, so not yet exposed.
-3. **Parent↔child links** between existing persons (add a parent/child to a person's birth event).
-4. **Token refresh** — JWT lasts ~30 days; the provider re-scrapes `__NEXT_DATA__.token` near expiry.
+3. **Token refresh** — JWT lasts ~30 days; the provider re-scrapes `__NEXT_DATA__.token` near expiry.
+
+### Parent↔child — RESOLVED (`familio_person.parents`)
+A child's parents are managed as a `parents` set (0–2 person uuids) on `familio_person` via the birth
+event's `parent` participants. Create embeds them in the create birth event; add/remove/change and
+birth-date edits all go through the **birth-event POST-upsert** above — no person recreation. Modelled
+as a gender-agnostic set (mirrors `familio_marriage.partners`) because the API has no father/mother
+roles. Read picks the birth event where the person is the `child` (a parent's `/events` also lists
+their children's births, where they are the `parent`).
 
 ## Capture recipe (browser)
 
