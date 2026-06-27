@@ -9,9 +9,11 @@ package marriage
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/dmalch/terraform-provider-familio/internal/config"
 	"github.com/dmalch/terraform-provider-familio/internal/familio"
@@ -44,6 +46,24 @@ func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, r
 	r.client = data.Client
 }
 
+// ImportState parses a composite ID "<partner_person_uuid>:<wedding_event_uuid>".
+// The event uuid alone is not addressable (events are a person sub-resource, no
+// global GET), so import needs a partner to anchor the read; Read then
+// reconciles the full partner set from the event's participants.
 func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("uuid"), req, resp)
+	partner, event, ok := strings.Cut(req.ID, ":")
+	if !ok || partner == "" || event == "" {
+		resp.Diagnostics.AddError(
+			"Invalid import ID",
+			`familio_marriage import ID must be "<partner_person_uuid>:<wedding_event_uuid>"`,
+		)
+		return
+	}
+	partners, d := types.SetValueFrom(ctx, types.StringType, []string{partner})
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("uuid"), event)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("partners"), partners)...)
 }

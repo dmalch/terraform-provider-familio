@@ -1,6 +1,7 @@
 # Build artifacts
 /terraform-provider-familio
 /bin/
+/dist/
 *.exe
 
 # Terraform

@@ -40,6 +40,16 @@ test:
 	go test -v ./...
 	@echo "${YELLOW}Testing...${NC} ${GREEN}Done${NC}"
 
+# Acceptance tests hit the live familio.org API and mutate the account whose
+# session is in FAMILIO_COOKIES (or FAMILIO_SESSION). They create and destroy
+# disposable persons/marriages. Skipped automatically without those env vars.
+.PHONY: testacc
+testacc:
+	@echo "${WHITE}=====================${NC}"
+	@echo "${YELLOW}Acceptance testing (live API)...${NC}"
+	TF_ACC=1 go test -v -count=1 ./test/acceptance/...
+	@echo "${YELLOW}Acceptance testing...${NC} ${GREEN}Done${NC}"
+
 .PHONY: docs
 docs:
 	@echo "${WHITE}=====================${NC}"

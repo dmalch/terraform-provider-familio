@@ -24,6 +24,41 @@ two persons. Birth and death are life facts folded into `familio_person`. Editin
 existing event's date in place is not yet supported, so changing a birth/death/marriage
 date forces replacement.
 
+## Using the provider
+
+```hcl
+terraform {
+  required_providers {
+    familio = {
+      source  = "dmalch/familio"
+      version = "~> 0.1"
+    }
+  }
+}
+
+provider "familio" {
+  # credentials via attribute or the FAMILIO_COOKIES env var — see Authentication
+}
+
+resource "familio_person" "ivan" {
+  first_name = "Иван"
+  last_name  = "Иванов"
+  gender     = "male"
+  birth_date = { year = 1850 }
+}
+
+resource "familio_person" "maria" {
+  first_name = "Мария"
+  last_name  = "Иванова"
+  gender     = "female"
+}
+
+resource "familio_marriage" "ivan_maria" {
+  partners      = [familio_person.ivan.uuid, familio_person.maria.uuid]
+  marriage_date = { year = 1875 }
+}
+```
+
 ## Authentication
 
 familio.org uses a **browser session cookie** named `t` (not OAuth). Provide it any of

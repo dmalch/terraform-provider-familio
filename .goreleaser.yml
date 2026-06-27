@@ -16,8 +16,11 @@ builds:
       - -trimpath
     ldflags:
       - '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}'
+    # NOTE: freebsd is intentionally omitted. The browser-cookie auth path
+    # (github.com/steipete/sweetcookie) depends on modernc.org/sqlite →
+    # modernc.org/libc, which does not compile for 32-bit freebsd. The Terraform
+    # Registry does not require freebsd, so the matrix is darwin/linux/windows.
     goos:
-      - freebsd
       - windows
       - linux
       - darwin
@@ -32,8 +35,6 @@ builds:
       - goos: windows
         goarch: arm
       - goos: windows
-        goarch: arm64
-      - goos: freebsd
         goarch: arm64
     binary: '{{ .ProjectName }}_v{{ .Version }}'
 archives:

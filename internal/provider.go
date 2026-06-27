@@ -24,15 +24,21 @@ const (
 )
 
 // FamilioProvider is the provider implementation.
-type FamilioProvider struct{}
+type FamilioProvider struct {
+	version string
+}
 
-// New returns a new provider instance.
-func New() provider.Provider {
-	return &FamilioProvider{}
+// New returns a provider factory stamped with the build version (set via
+// goreleaser ldflags in main; "dev" for local builds, "test" in tests).
+func New(version string) func() provider.Provider {
+	return func() provider.Provider {
+		return &FamilioProvider{version: version}
+	}
 }
 
 func (p *FamilioProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "familio"
+	resp.Version = p.version
 }
 
 func (p *FamilioProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
