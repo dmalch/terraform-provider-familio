@@ -84,6 +84,7 @@ resource "familio_person" "dad" {
   last_name  = "Отцов"
   gender     = "male"
   privacy    = "invisible"
+  birth_date = { year = 1860 }
 }
 
 resource "familio_person" "mom" {
@@ -132,6 +133,19 @@ resource "familio_person" "child" {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("familio_person.child", tfjsonpath.New("parents"), knownvalue.SetSizeExact(1)),
 					statecheck.ExpectKnownValue("familio_person.child", tfjsonpath.New("birth_date").AtMapKey("year"), knownvalue.Int64Exact(1881)),
+				},
+			},
+			{
+				// Regression for #4: dad is a parent, so dad's /events also lists the
+				// child's birth event. Importing dad must read back dad's OWN birth
+				// year (1860), not the child's (1881); ImportStateVerify fails if
+				// birth_date is dropped to null or read from the wrong event.
+				ResourceName:                         "familio_person.dad",
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "uuid",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					return s.RootModule().Resources["familio_person.dad"].Primary.Attributes["uuid"], nil
 				},
 			},
 		},
