@@ -2,23 +2,8 @@ package familio
 
 import "testing"
 
-func TestMakeDateEqualVsBetween(t *testing.T) {
-	single := MakeDate(&DatePart{Year: 1900}, nil)
-	if single.Type != dateTypeEqual || single.Second != nil {
-		t.Errorf("single date should be equal with no second, got %+v", single)
-	}
-
-	rng := MakeDate(&DatePart{Year: 1900}, &DatePart{Year: 1910})
-	if rng.Type != dateTypeBetween || rng.First == nil || rng.Second == nil {
-		t.Errorf("range date should be between with both ends, got %+v", rng)
-	}
-	if rng.Second.Year != 1910 {
-		t.Errorf("range end year = %d, want 1910", rng.Second.Year)
-	}
-}
-
 func TestFactEvent(t *testing.T) {
-	ev := FactEvent("location", MakeDate(&DatePart{Year: 1880}, nil), "person-uuid", "Москва")
+	ev := FactEvent("location", &DateRange{Year: 1880}, "person-uuid", "Москва")
 	if ev.Type != "location" {
 		t.Errorf("type = %q, want location", ev.Type)
 	}

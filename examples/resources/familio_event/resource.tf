@@ -1,10 +1,10 @@
 # A residence (familio "location") event on a person, spanning a date range.
+# A span is expressed within the date block via range = "between" + end_*.
 resource "familio_event" "ivan_residence" {
-  person   = familio_person.ivan.uuid
-  type     = "location"
-  date     = { year = 1878 }
-  end_date = { year = 1890 }
-  comment  = "Москва, Тверская улица"
+  person  = familio_person.ivan.uuid
+  type    = "location"
+  date    = { year = 1878, range = "between", end_year = 1890 }
+  comment = "Москва, Тверская улица"
 }
 
 # An occupation, at a point in time.
@@ -15,12 +15,11 @@ resource "familio_event" "ivan_job" {
   comment = "Кузнец"
 }
 
-# Military service.
+# Military service over a span of years.
 resource "familio_event" "ivan_army" {
-  person   = familio_person.ivan.uuid
-  type     = "militaryService"
-  date     = { year = 1900 }
-  end_date = { year = 1903 }
+  person = familio_person.ivan.uuid
+  type   = "militaryService"
+  date   = { year = 1900, range = "between", end_year = 1903 }
 }
 
 # A godparent (Восприемник) record. Per familio's model this is recorded on the

@@ -1,3 +1,28 @@
+## 0.5.0
+
+FEATURES:
+
+* **Date blocks now express familio's full complex-date model.** Every date attribute
+  (`familio_person` birth/death/christening, `familio_marriage.marriage_date`,
+  `familio_event.date`) gains optional fields, mirroring the sibling
+  `dmalch/terraform-provider-genealogy` date model:
+  * `circa` — an approximate date (familio's `about` type), e.g. `{ year = 1846, circa = true }`.
+  * `range` — an open bound or span: `before`, `after`, or `between`. `between` takes a
+    second endpoint via `end_year`/`end_month`/`end_day`, e.g.
+    `{ year = 1846, range = "between", end_year = 1850 }`.
+  * `calendar` — `gregorian` (default) or `julian`, for pre-1918 records.
+
+  Plain `{ year = 1846 }` keeps working unchanged. familio carries a single whole-date type,
+  so `circa` and `range` are mutually exclusive (and per-endpoint `end_circa` is not
+  supported); combining them is rejected at plan time rather than silently writing a wrong date.
+
+BREAKING CHANGES:
+
+* **`familio_event` no longer has a separate `end_date` block.** A date span is now expressed
+  within the single `date` block via `range = "between"` and `end_year`/`end_month`/`end_day`
+  (e.g. `date = { year = 1878, range = "between", end_year = 1890 }`), so the same date model
+  is used across every resource. Update any `familio_event` using `end_date`.
+
 ## 0.4.2
 
 BUG FIXES:

@@ -40,7 +40,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	// upserts the person's single birth event in place (a full replace), so a
 	// change to either is applied without recreating the person.
 	if !plan.BirthDate.Equal(state.BirthDate) || !plan.Parents.Equal(state.Parents) {
-		birth, d := tfdate.PartFromObject(ctx, plan.BirthDate)
+		birth, d := tfdate.RangeFromObject(ctx, plan.BirthDate)
 		resp.Diagnostics.Append(d...)
 		parents, dp := parentList(ctx, plan.Parents)
 		resp.Diagnostics.Append(dp...)
@@ -103,7 +103,7 @@ func basicChanged(plan, state *ResourceModel) bool {
 // existing death event when deathDate is cleared.
 func (r *Resource) reconcileDeath(ctx context.Context, uuid string, deathDate types.Object, resp *resource.UpdateResponse) {
 	if !deathDate.IsNull() && !deathDate.IsUnknown() {
-		part, d := tfdate.PartFromObject(ctx, deathDate)
+		part, d := tfdate.RangeFromObject(ctx, deathDate)
 		resp.Diagnostics.Append(d...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -150,7 +150,7 @@ func (r *Resource) reconcileChristening(ctx context.Context, uuid string, christ
 	if christeningDate.IsNull() || christeningDate.IsUnknown() {
 		return
 	}
-	part, d := tfdate.PartFromObject(ctx, christeningDate)
+	part, d := tfdate.RangeFromObject(ctx, christeningDate)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return

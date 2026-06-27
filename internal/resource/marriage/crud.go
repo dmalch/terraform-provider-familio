@@ -20,7 +20,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 
 	partners, diags := partnerList(ctx, plan.Partners)
 	resp.Diagnostics.Append(diags...)
-	date, dd := tfdate.PartFromObject(ctx, plan.MarriageDate)
+	date, dd := tfdate.RangeFromObject(ctx, plan.MarriageDate)
 	resp.Diagnostics.Append(dd...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -84,7 +84,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 	state.Partners = partnerSet
-	state.MarriageDate = tfdate.Object(event.Date.First)
+	state.MarriageDate = tfdate.ObjectFromRange(familio.RangeFromEventDate(event.Date))
 	state.CreatedAt = types.StringValue(event.CreatedAt)
 	state.UpdatedAt = types.StringValue(event.UpdatedAt)
 

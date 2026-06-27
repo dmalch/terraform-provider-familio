@@ -136,14 +136,6 @@ type CreatePersonInput struct {
 	Events []Event
 }
 
-// equalDate wraps an optional DatePart in a single-valued gregorian complex date.
-func equalDate(first *DatePart) EventDate {
-	if first != nil && first.Type == "" {
-		first.Type = calendarGregorian
-	}
-	return EventDate{Calendar: calendarGregorian, Type: dateTypeEqual, First: first}
-}
-
 // BirthEvent builds a birth event for childRef (SelfRef when the child is being
 // created in the same POST /persons request, or the child's uuid when rebuilding
 // an existing person's birth event), attaching 0–2 parent persons (role
@@ -151,33 +143,33 @@ func equalDate(first *DatePart) EventDate {
 // participant, so POSTing this event replaces the whole event (participants +
 // date) in place — that is how parents are added/removed and the birth date is
 // edited without recreating the person.
-func BirthEvent(date *DatePart, childRef string, parents []string) Event {
+func BirthEvent(date *DateRange, childRef string, parents []string) Event {
 	parts := []Participant{{PersonUUID: childRef, Role: RoleChild}}
 	for _, p := range parents {
 		parts = append(parts, Participant{PersonUUID: p, Role: RoleParent})
 	}
-	return Event{Type: EventBirth, Date: equalDate(date), Participants: parts}
+	return Event{Type: EventBirth, Date: EventDateFromRange(date), Participants: parts}
 }
 
 // SelfBirthEvent builds the mandatory birth event for the person being created.
 // Pass nil for an unknown date.
-func SelfBirthEvent(date *DatePart) Event {
+func SelfBirthEvent(date *DateRange) Event {
 	return BirthEvent(date, SelfRef, nil)
 }
 
 // DeathEvent builds a death event owned by ownerRef (SelfRef on create, or the
 // person's uuid when upserting an existing person's death event). Like the birth
 // event, re-POSTing it replaces the person's single death event in place.
-func DeathEvent(date *DatePart, ownerRef string) Event {
+func DeathEvent(date *DateRange, ownerRef string) Event {
 	return Event{
 		Type:         EventDeath,
-		Date:         equalDate(date),
+		Date:         EventDateFromRange(date),
 		Participants: []Participant{{PersonUUID: ownerRef, Role: RoleOwner}},
 	}
 }
 
 // SelfDeathEvent builds an optional death event for the person being created.
-func SelfDeathEvent(date *DatePart) Event {
+func SelfDeathEvent(date *DateRange) Event {
 	return DeathEvent(date, SelfRef)
 }
 
@@ -185,16 +177,16 @@ func SelfDeathEvent(date *DatePart) Event {
 // (SelfRef on create, or the person's uuid otherwise). Unlike birth/death, a
 // baptism is a repeatable fact event: re-POSTing does NOT replace it, so editing
 // a christening date means deleting the old event and creating a new one.
-func BaptismEvent(date *DatePart, ownerRef string) Event {
+func BaptismEvent(date *DateRange, ownerRef string) Event {
 	return Event{
 		Type:         EventBaptism,
-		Date:         equalDate(date),
+		Date:         EventDateFromRange(date),
 		Participants: []Participant{{PersonUUID: ownerRef, Role: RoleOwner}},
 	}
 }
 
 // SelfBaptismEvent builds an optional christening event for the person being created.
-func SelfBaptismEvent(date *DatePart) Event {
+func SelfBaptismEvent(date *DateRange) Event {
 	return BaptismEvent(date, SelfRef)
 }
 
