@@ -34,6 +34,14 @@ resource "familio_event" "test" {
   date     = { year = 1878 }
   end_date = { year = 1890 }
   comment  = "Москва"
+}
+
+# A godparent (Восприемник) event — single-subject, godchild noted in comment.
+resource "familio_event" "godparent" {
+  person  = familio_person.subj.uuid
+  type    = "godparent"
+  date    = { year = 1881 }
+  comment = "Восприемник Петра"
 }`,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("familio_event.test", tfjsonpath.New("type"), knownvalue.StringExact("location")),
@@ -41,6 +49,8 @@ resource "familio_event" "test" {
 					statecheck.ExpectKnownValue("familio_event.test", tfjsonpath.New("end_date").AtMapKey("year"), knownvalue.Int64Exact(1890)),
 					statecheck.ExpectKnownValue("familio_event.test", tfjsonpath.New("comment"), knownvalue.StringExact("Москва")),
 					statecheck.ExpectKnownValue("familio_event.test", tfjsonpath.New("uuid"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("familio_event.godparent", tfjsonpath.New("type"), knownvalue.StringExact("godparent")),
+					statecheck.ExpectKnownValue("familio_event.godparent", tfjsonpath.New("comment"), knownvalue.StringExact("Восприемник Петра")),
 				},
 			},
 			{

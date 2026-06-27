@@ -1,3 +1,12 @@
+## 0.4.1
+
+ENHANCEMENTS:
+
+* `familio_event` now accepts the `godparent` (Восприемник) and `warranter` (Поручитель) event
+  types. Per familio's own data model (confirmed by their team) these are single-subject events
+  recorded on the godparent/witness — familio does not link them to the godchild/party, so name
+  that person in `comment`.
+
 ## 0.4.0
 
 FEATURES:

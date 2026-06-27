@@ -38,3 +38,17 @@ func TestFactEventTypesExcludesManagedElsewhere(t *testing.T) {
 		}
 	}
 }
+
+func TestFactEventTypesIncludesGodparentAndWarranter(t *testing.T) {
+	// Per Familio's own model these are single-subject events on the
+	// godparent/witness, so familio_event must accept them.
+	present := map[string]bool{}
+	for _, ty := range FactEventTypes {
+		present[ty] = true
+	}
+	for _, ty := range []string{"godparent", "warranter"} {
+		if !present[ty] {
+			t.Errorf("FactEventTypes must include %q", ty)
+		}
+	}
+}

@@ -19,11 +19,17 @@ func WeddingEvent(date *DatePart, partnerA, partnerB string) Event {
 }
 
 // FactEventTypes is the set of single-subject "fact" event types a familio_event
-// resource may carry (role "owner"). It deliberately EXCLUDES the events managed
-// by dedicated surfaces — birth/death/baptism (folded into familio_person),
-// wedding/divorce/affiance/nikah (relationships), and the two-participant
-// godparent/warranter — so the two never fight over one event. Source: the
-// editor's event catalogue (internal/familio/API.md).
+// resource may carry (role "owner"). It EXCLUDES the events managed by dedicated
+// surfaces — birth/death/baptism (folded into familio_person) and the true
+// two-person relationship events wedding/divorce/affiance/nikah — so the two
+// never fight over one event.
+//
+// godparent (Восприемник) and warranter (Поручитель) ARE included: per Familio's
+// own model (confirmed by their team in the official group) these are
+// single-subject events recorded on the godparent/witness themselves — Familio
+// deliberately does NOT link them to the specific godchild/party, so the
+// godchild is noted in the comment, exactly as Familio's power users do.
+// Source: the editor's event catalogue (internal/familio/API.md).
 var FactEventTypes = []string{
 	"arrest", "barMitzvah", "batMitzvah", "blessing", "militaryAward", "militaryService",
 	"citizenship", "titleOfNobility", "demobilization", "immigration", "naming", "confirmation",
@@ -32,7 +38,7 @@ var FactEventTypes = []string{
 	"conscription", "missing", "profession", "convictRehabilitation", "renaming", "resurnaming",
 	"crime", "hajj", "exhumation", "emigration", "injury", "travel", "pilgrimage", "collectiveFarm",
 	"party", "evacuation", "scienceDegree", "dekulakization", "treatment", "combat",
-	"militaryCemetery", "heroicAct", "reference",
+	"militaryCemetery", "heroicAct", "reference", "godparent", "warranter",
 }
 
 // MakeDate builds a complex date: a single "equal" date when second is nil, or a

@@ -35,8 +35,11 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"type": schema.StringAttribute{
 				Description: "Event type. One of familio's single-subject fact types, e.g. location " +
 					"(residence), profession, education, militaryService, militaryAward, award, " +
-					"citizenship, emigration, immigration, arrest, burial. (birth/death/baptism, " +
-					"wedding/divorce and godparent/warranter are managed elsewhere and not allowed here.)",
+					"citizenship, emigration, immigration, arrest, burial, godparent (Восприемник), " +
+					"warranter (Поручитель). Per familio's own model, godparent/warranter are recorded " +
+					"on the godparent/witness; familio does not link them to the godchild/party, so name " +
+					"that person in `comment`. (birth/death/baptism are on familio_person; " +
+					"wedding/divorce are relationships and not allowed here.)",
 				Required: true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(familio.FactEventTypes...),
