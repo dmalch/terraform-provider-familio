@@ -33,19 +33,19 @@ func basicFromModel(m *ResourceModel) familio.BasicFields {
 func eventsFromModel(ctx context.Context, m *ResourceModel) ([]familio.Event, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	birth, d := tfdate.PartFromObject(ctx, m.BirthDate)
+	birth, d := tfdate.RangeFromObject(ctx, m.BirthDate)
 	diags.Append(d...)
 	parents, dp := parentList(ctx, m.Parents)
 	diags.Append(dp...)
 	events := []familio.Event{familio.BirthEvent(birth, familio.SelfRef, parents)}
 
 	if !m.DeathDate.IsNull() && !m.DeathDate.IsUnknown() {
-		death, dd := tfdate.PartFromObject(ctx, m.DeathDate)
+		death, dd := tfdate.RangeFromObject(ctx, m.DeathDate)
 		diags.Append(dd...)
 		events = append(events, familio.SelfDeathEvent(death))
 	}
 	if !m.ChristeningDate.IsNull() && !m.ChristeningDate.IsUnknown() {
-		bap, db := tfdate.PartFromObject(ctx, m.ChristeningDate)
+		bap, db := tfdate.RangeFromObject(ctx, m.ChristeningDate)
 		diags.Append(db...)
 		events = append(events, familio.SelfBaptismEvent(bap))
 	}
@@ -82,9 +82,9 @@ func applyBasicToState(rec *familio.BasicRecord, m *ResourceModel) {
 // applyEventsToState sets birth_date/death_date/christening_date from a read-back
 // events slice.
 func applyEventsToState(events []familio.Event, m *ResourceModel) {
-	m.BirthDate = tfdate.Object(ownBirthDatePart(events, m.UUID.ValueString()))
-	m.DeathDate = tfdate.Object(eventDatePart(events, familio.EventDeath))
-	m.ChristeningDate = tfdate.Object(eventDatePart(events, familio.EventBaptism))
+	m.BirthDate = tfdate.ObjectFromRange(ownBirthDate(events, m.UUID.ValueString()))
+	m.DeathDate = tfdate.ObjectFromRange(eventDate(events, familio.EventDeath))
+	m.ChristeningDate = tfdate.ObjectFromRange(eventDate(events, familio.EventBaptism))
 }
 
 // applyParentsToState sets the parents set from this person's own birth event
@@ -108,24 +108,24 @@ func applyParentsToState(ctx context.Context, events []familio.Event, m *Resourc
 	return diags
 }
 
-// ownBirthDatePart returns the date of the person's OWN birth event — the one
-// where they are the child. A person who is also a parent has their children's
-// birth events on the same /events list (where they hold role parent), so a
-// plain type filter (eventDatePart) could return a child's birth date instead.
-// Mirrors applyParentsToState, which reads parents from this same event.
-func ownBirthDatePart(events []familio.Event, personUUID string) *familio.DatePart {
+// ownBirthDate returns the date of the person's OWN birth event — the one where
+// they are the child. A person who is also a parent has their children's birth
+// events on the same /events list (where they hold role parent), so a plain type
+// filter (eventDate) could return a child's birth date instead. Mirrors
+// applyParentsToState, which reads parents from this same event.
+func ownBirthDate(events []familio.Event, personUUID string) *familio.DateRange {
 	birth := familio.OwnBirthEvent(events, personUUID)
 	if birth == nil {
 		return nil
 	}
-	return birth.Date.First
+	return familio.RangeFromEventDate(birth.Date)
 }
 
-// eventDatePart returns the date of the first event of the given type, or nil.
-func eventDatePart(events []familio.Event, typ string) *familio.DatePart {
+// eventDate returns the date of the first event of the given type, or nil.
+func eventDate(events []familio.Event, typ string) *familio.DateRange {
 	for i := range events {
 		if events[i].Type == typ {
-			return events[i].Date.First
+			return familio.RangeFromEventDate(events[i].Date)
 		}
 	}
 	return nil

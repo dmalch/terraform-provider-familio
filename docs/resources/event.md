@@ -14,12 +14,12 @@ A single-subject life-fact event on a familio.org person — the long tail of fa
 
 ```terraform
 # A residence (familio "location") event on a person, spanning a date range.
+# A span is expressed within the date block via range = "between" + end_*.
 resource "familio_event" "ivan_residence" {
-  person   = familio_person.ivan.uuid
-  type     = "location"
-  date     = { year = 1878 }
-  end_date = { year = 1890 }
-  comment  = "Москва, Тверская улица"
+  person  = familio_person.ivan.uuid
+  type    = "location"
+  date    = { year = 1878, range = "between", end_year = 1890 }
+  comment = "Москва, Тверская улица"
 }
 
 # An occupation, at a point in time.
@@ -30,12 +30,11 @@ resource "familio_event" "ivan_job" {
   comment = "Кузнец"
 }
 
-# Military service.
+# Military service over a span of years.
 resource "familio_event" "ivan_army" {
-  person   = familio_person.ivan.uuid
-  type     = "militaryService"
-  date     = { year = 1900 }
-  end_date = { year = 1903 }
+  person = familio_person.ivan.uuid
+  type   = "militaryService"
+  date   = { year = 1900, range = "between", end_year = 1903 }
 }
 
 # A godparent (Восприемник) record. Per familio's model this is recorded on the
@@ -60,8 +59,7 @@ resource "familio_event" "ivan_godparent" {
 ### Optional
 
 - `comment` (String) Free-text note (familio has no type-specific fields; details like an award name or occupation go here).
-- `date` (Attributes) Event date (or the start of a range when end_date is set). Changing it forces a new resource (event editing is not yet supported). (see [below for nested schema](#nestedatt--date))
-- `end_date` (Attributes) Optional end of a date range; setting it makes the event span date…end_date. Changing it forces a new resource (event editing is not yet supported). (see [below for nested schema](#nestedatt--end_date))
+- `date` (Attributes) Event date. May be approximate (circa), bounded (range = before/after) or a span (range = between with end_year/…). Changing it forces a new resource (event editing is not yet supported). (see [below for nested schema](#nestedatt--date))
 
 ### Read-Only
 
@@ -78,21 +76,15 @@ Required:
 
 Optional:
 
+- `calendar` (String) Calendar: gregorian (default) | julian.
+- `circa` (Boolean) Approximate ("circa") date — familio's "about" type. Cannot be combined with range.
 - `day` (Number) Day of month, 1-31.
+- `end_circa` (Boolean) Accepted for cross-provider config symmetry, but familio has no per-endpoint approximation, so it cannot be combined with range.
+- `end_day` (Number) Second endpoint day, 1-31 (only with range = "between").
+- `end_month` (Number) Second endpoint month, 1-12 (only with range = "between").
+- `end_year` (Number) Second endpoint year (only with range = "between").
 - `month` (Number) Month, 1-12.
-
-
-<a id="nestedatt--end_date"></a>
-### Nested Schema for `end_date`
-
-Required:
-
-- `year` (Number) Year (e.g. 1900).
-
-Optional:
-
-- `day` (Number) Day of month, 1-31.
-- `month` (Number) Month, 1-12.
+- `range` (String) Open bound or range: before | after | between. Omit for a single date. "between" needs end_year (the second endpoint).
 
 ## Import
 

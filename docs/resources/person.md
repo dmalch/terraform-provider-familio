@@ -52,6 +52,29 @@ resource "familio_person" "maria" {
   }
 }
 
+# Approximate and bounded dates (familio's complex-date model). A date block may
+# be a precise date, an approximation (circa → "about"), an open bound
+# (range = before | after) or a span (range = between + end_*), in either the
+# gregorian (default) or julian calendar.
+resource "familio_person" "fekla" {
+  first_name = "Фёкла"
+  last_name  = "Иванова"
+  gender     = "female"
+
+  # "circa 1846", recorded in the julian calendar.
+  birth_date = {
+    year     = 1846
+    circa    = true
+    calendar = "julian"
+  }
+
+  # Known only to be before 1910 (e.g. last seen alive in a census).
+  death_date = {
+    year  = 1910
+    range = "before"
+  }
+}
+
 # A child linked to both parents. The parents set (0–2 person UUIDs) is stored on
 # the child's birth event; order does not matter and a parent's father/mother
 # role is inferred from their own gender. Parents (and the birth date) can be
@@ -109,8 +132,15 @@ Required:
 
 Optional:
 
+- `calendar` (String) Calendar: gregorian (default) | julian.
+- `circa` (Boolean) Approximate ("circa") date — familio's "about" type. Cannot be combined with range.
 - `day` (Number) Day of month, 1-31.
+- `end_circa` (Boolean) Accepted for cross-provider config symmetry, but familio has no per-endpoint approximation, so it cannot be combined with range.
+- `end_day` (Number) Second endpoint day, 1-31 (only with range = "between").
+- `end_month` (Number) Second endpoint month, 1-12 (only with range = "between").
+- `end_year` (Number) Second endpoint year (only with range = "between").
 - `month` (Number) Month, 1-12.
+- `range` (String) Open bound or range: before | after | between. Omit for a single date. "between" needs end_year (the second endpoint).
 
 
 <a id="nestedatt--christening_date"></a>
@@ -122,8 +152,15 @@ Required:
 
 Optional:
 
+- `calendar` (String) Calendar: gregorian (default) | julian.
+- `circa` (Boolean) Approximate ("circa") date — familio's "about" type. Cannot be combined with range.
 - `day` (Number) Day of month, 1-31.
+- `end_circa` (Boolean) Accepted for cross-provider config symmetry, but familio has no per-endpoint approximation, so it cannot be combined with range.
+- `end_day` (Number) Second endpoint day, 1-31 (only with range = "between").
+- `end_month` (Number) Second endpoint month, 1-12 (only with range = "between").
+- `end_year` (Number) Second endpoint year (only with range = "between").
 - `month` (Number) Month, 1-12.
+- `range` (String) Open bound or range: before | after | between. Omit for a single date. "between" needs end_year (the second endpoint).
 
 
 <a id="nestedatt--death_date"></a>
@@ -135,8 +172,15 @@ Required:
 
 Optional:
 
+- `calendar` (String) Calendar: gregorian (default) | julian.
+- `circa` (Boolean) Approximate ("circa") date — familio's "about" type. Cannot be combined with range.
 - `day` (Number) Day of month, 1-31.
+- `end_circa` (Boolean) Accepted for cross-provider config symmetry, but familio has no per-endpoint approximation, so it cannot be combined with range.
+- `end_day` (Number) Second endpoint day, 1-31 (only with range = "between").
+- `end_month` (Number) Second endpoint month, 1-12 (only with range = "between").
+- `end_year` (Number) Second endpoint year (only with range = "between").
 - `month` (Number) Month, 1-12.
+- `range` (String) Open bound or range: before | after | between. Omit for a single date. "between" needs end_year (the second endpoint).
 
 ## Import
 

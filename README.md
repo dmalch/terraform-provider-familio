@@ -72,13 +72,14 @@ resource "familio_person" "pyotr" {
   parents    = [familio_person.ivan.uuid, familio_person.maria.uuid]
 }
 
-# A life-fact event (here: a residence over a date range).
+# A life-fact event (here: a residence over a date range). Dates may be
+# approximate (circa), bounded (range = before/after) or a span (range = between
+# + end_*), in the gregorian (default) or julian calendar.
 resource "familio_event" "ivan_residence" {
-  person   = familio_person.ivan.uuid
-  type     = "location"
-  date     = { year = 1878 }
-  end_date = { year = 1890 }
-  comment  = "Москва"
+  person  = familio_person.ivan.uuid
+  type    = "location"
+  date    = { year = 1878, range = "between", end_year = 1890 }
+  comment = "Москва"
 }
 ```
 

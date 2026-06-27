@@ -4,31 +4,12 @@ import (
 	"context"
 	"errors"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/dmalch/terraform-provider-familio/internal/familio"
 	"github.com/dmalch/terraform-provider-familio/internal/tfdate"
 )
-
-// ValidateConfig rejects an end_date without a date (a range needs a start).
-var _ resource.ResourceWithValidateConfig = (*Resource)(nil)
-
-func (r *Resource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var data ResourceModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	if !data.EndDate.IsNull() && !data.EndDate.IsUnknown() && data.Date.IsNull() {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("end_date"),
-			"end_date requires date",
-			"end_date marks the end of a range, so date (the start) must also be set.",
-		)
-	}
-}
 
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan ResourceModel
@@ -37,15 +18,13 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	first, d := tfdate.PartFromObject(ctx, plan.Date)
+	date, d := tfdate.RangeFromObject(ctx, plan.Date)
 	resp.Diagnostics.Append(d...)
-	second, d2 := tfdate.PartFromObject(ctx, plan.EndDate)
-	resp.Diagnostics.Append(d2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	ev := familio.FactEvent(plan.Type.ValueString(), familio.MakeDate(first, second), plan.Person.ValueString(), plan.Comment.ValueString())
+	ev := familio.FactEvent(plan.Type.ValueString(), date, plan.Person.ValueString(), plan.Comment.ValueString())
 	created, err := r.client.CreateEvent(ctx, plan.Person.ValueString(), ev)
 	if err != nil {
 		resp.Diagnostics.AddError("Cannot create familio_event", err.Error())
@@ -88,8 +67,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 
 	state.Type = types.StringValue(ev.Type)
-	state.Date = tfdate.Object(ev.Date.First)
-	state.EndDate = tfdate.Object(ev.Date.Second)
+	state.Date = tfdate.ObjectFromRange(familio.RangeFromEventDate(ev.Date))
 	if ev.Comment == "" {
 		state.Comment = types.StringNull()
 	} else {

@@ -29,11 +29,10 @@ resource "familio_person" "subj" {
 			{
 				Config: person + `
 resource "familio_event" "test" {
-  person   = familio_person.subj.uuid
-  type     = "location"
-  date     = { year = 1878 }
-  end_date = { year = 1890 }
-  comment  = "Москва"
+  person  = familio_person.subj.uuid
+  type    = "location"
+  date    = { year = 1878, range = "between", end_year = 1890 }
+  comment = "Москва"
 }
 
 # A godparent (Восприемник) event — single-subject, godchild noted in comment.
@@ -46,7 +45,8 @@ resource "familio_event" "godparent" {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("familio_event.test", tfjsonpath.New("type"), knownvalue.StringExact("location")),
 					statecheck.ExpectKnownValue("familio_event.test", tfjsonpath.New("date").AtMapKey("year"), knownvalue.Int64Exact(1878)),
-					statecheck.ExpectKnownValue("familio_event.test", tfjsonpath.New("end_date").AtMapKey("year"), knownvalue.Int64Exact(1890)),
+					statecheck.ExpectKnownValue("familio_event.test", tfjsonpath.New("date").AtMapKey("range"), knownvalue.StringExact("between")),
+					statecheck.ExpectKnownValue("familio_event.test", tfjsonpath.New("date").AtMapKey("end_year"), knownvalue.Int64Exact(1890)),
 					statecheck.ExpectKnownValue("familio_event.test", tfjsonpath.New("comment"), knownvalue.StringExact("Москва")),
 					statecheck.ExpectKnownValue("familio_event.test", tfjsonpath.New("uuid"), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue("familio_event.godparent", tfjsonpath.New("type"), knownvalue.StringExact("godparent")),

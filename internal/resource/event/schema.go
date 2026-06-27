@@ -46,8 +46,8 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				},
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"date":     tfdate.Block("Event date (or the start of a range when end_date is set).", true),
-			"end_date": tfdate.Block("Optional end of a date range; setting it makes the event span date…end_date.", true),
+			"date": tfdate.Block("Event date. May be approximate (circa), bounded (range = "+
+				"before/after) or a span (range = between with end_year/…).", true),
 			"comment": schema.StringAttribute{
 				Description:   "Free-text note (familio has no type-specific fields; details like an award name or occupation go here).",
 				Optional:      true,

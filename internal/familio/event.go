@@ -7,10 +7,10 @@ import (
 
 // WeddingEvent builds a marriage event linking two existing persons as spouses.
 // Pass nil for an unknown date.
-func WeddingEvent(date *DatePart, partnerA, partnerB string) Event {
+func WeddingEvent(date *DateRange, partnerA, partnerB string) Event {
 	return Event{
 		Type: EventWedding,
-		Date: equalDate(date),
+		Date: EventDateFromRange(date),
 		Participants: []Participant{
 			{PersonUUID: partnerA, Role: RoleSpouse},
 			{PersonUUID: partnerB, Role: RoleSpouse},
@@ -41,27 +41,12 @@ var FactEventTypes = []string{
 	"militaryCemetery", "heroicAct", "reference", "godparent", "warranter",
 }
 
-// MakeDate builds a complex date: a single "equal" date when second is nil, or a
-// "between" range when both endpoints are set.
-func MakeDate(first, second *DatePart) EventDate {
-	if second == nil {
-		return equalDate(first)
-	}
-	if first != nil && first.Type == "" {
-		first.Type = calendarGregorian
-	}
-	if second.Type == "" {
-		second.Type = calendarGregorian
-	}
-	return EventDate{Calendar: calendarGregorian, Type: dateTypeBetween, First: first, Second: second}
-}
-
 // FactEvent builds a single-subject fact event (role "owner") of the given type
-// for ownerRef, with a free-text comment.
-func FactEvent(eventType string, date EventDate, ownerRef, comment string) Event {
+// for ownerRef, with a free-text comment. Pass nil for an unknown date.
+func FactEvent(eventType string, date *DateRange, ownerRef, comment string) Event {
 	return Event{
 		Type:         eventType,
-		Date:         date,
+		Date:         EventDateFromRange(date),
 		Participants: []Participant{{PersonUUID: ownerRef, Role: RoleOwner}},
 		Comment:      comment,
 	}
