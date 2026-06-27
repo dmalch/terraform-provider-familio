@@ -209,6 +209,14 @@ person must be in the participant list (a single-participant POST → 400 «до
    settlement uuid is untested, so not yet exposed.
 3. **Token refresh** — JWT lasts ~30 days; the provider re-scrapes `__NEXT_DATA__.token` near expiry.
 
+### owner_id + relationship discovery — RESOLVED (`familio_person` data source)
+`ownerId` is on the authed `GET /persons/<uuid>` (regularPerson) view but NOT on the public
+settlement list, so the `familio_person` data source reads it per-uuid (via `GetPersonRegular`)
+to tell one's own tree from other owners'/catalog rows. Relationships are derived from
+`GET /persons/<uuid>/events`: parents from the own birth event's `parent` participants
+(`OwnBirthEvent`), spouses from wedding events (`SpousesOf`), and children as the inverse —
+birth events where the person is a `parent` (`ChildrenOf`).
+
 ### Parent↔child — RESOLVED (`familio_person.parents`)
 A child's parents are managed as a `parents` set (0–2 person uuids) on `familio_person` via the birth
 event's `parent` participants. Create embeds them in the create birth event; add/remove/change and
