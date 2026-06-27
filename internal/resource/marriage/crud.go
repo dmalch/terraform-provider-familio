@@ -30,7 +30,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	event := familio.WeddingEvent(date, partners[0], partners[1])
+	event := familio.WeddingEvent(date, partners[0], partners[1], commentValue(plan.Comment))
 	created, err := r.client.CreateEvent(ctx, partners[0], event)
 	if err != nil {
 		resp.Diagnostics.AddError("Cannot create familio_marriage", err.Error())
@@ -85,6 +85,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 	state.Partners = partnerSet
 	state.MarriageDate = tfdate.ObjectFromRange(familio.RangeFromEventDate(event.Date))
+	state.Comment = commentOrNull(event.Comment)
 	state.CreatedAt = types.StringValue(event.CreatedAt)
 	state.UpdatedAt = types.StringValue(event.UpdatedAt)
 

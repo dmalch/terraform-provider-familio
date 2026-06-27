@@ -7,8 +7,8 @@ import (
 )
 
 // WeddingEvent builds a marriage event linking two existing persons as spouses.
-// Pass nil for an unknown date.
-func WeddingEvent(date *DateRange, partnerA, partnerB string) Event {
+// Pass nil for an unknown date and "" for no comment.
+func WeddingEvent(date *DateRange, partnerA, partnerB, comment string) Event {
 	return Event{
 		Type: EventWedding,
 		Date: EventDateFromRange(date),
@@ -16,6 +16,7 @@ func WeddingEvent(date *DateRange, partnerA, partnerB string) Event {
 			{PersonUUID: partnerA, Role: RoleSpouse},
 			{PersonUUID: partnerB, Role: RoleSpouse},
 		},
+		Comment: comment,
 	}
 }
 

@@ -22,6 +22,8 @@ resource "familio_marriage" "marriage" {
     month = 5
     day   = 12
   }
+
+  comment = "Венчание в Спасо-Преображенской церкви."
 }
 ```
 
@@ -34,6 +36,7 @@ resource "familio_marriage" "marriage" {
 
 ### Optional
 
+- `comment` (String) Free-text comment on the wedding event. Changing it forces replacement (event editing is not yet supported).
 - `marriage_date` (Attributes) Marriage date. Changing it forces a new resource (event editing is not yet supported). (see [below for nested schema](#nestedatt--marriage_date))
 
 ### Read-Only

@@ -140,8 +140,8 @@ func TestApplyEventsToStateUsesOwnBirthEvent(t *testing.T) {
 	// they are role "child"). A naive first-birth-event pick would read the
 	// child's date (1910) or nil; the person's own birth year is 1889.
 	events := []familio.Event{
-		familio.BirthEvent(&familio.DateRange{Year: 1910}, "uuid-child", []string{personUUID}),
-		familio.BirthEvent(&familio.DateRange{Year: 1889}, personUUID, []string{"uuid-dad", "uuid-mom"}),
+		familio.BirthEvent(&familio.DateRange{Year: 1910}, "uuid-child", []string{personUUID}, "", ""),
+		familio.BirthEvent(&familio.DateRange{Year: 1889}, personUUID, []string{"uuid-dad", "uuid-mom"}, "", ""),
 	}
 	m := &ResourceModel{UUID: types.StringValue(personUUID)}
 	applyEventsToState(events, m)
@@ -162,10 +162,10 @@ func TestApplyParentsToState(t *testing.T) {
 	const childUUID = "uuid-child"
 	events := []familio.Event{
 		// The child's own birth event (this is what we read parents from).
-		familio.BirthEvent(nil, childUUID, []string{"uuid-mom", "uuid-dad"}),
+		familio.BirthEvent(nil, childUUID, []string{"uuid-mom", "uuid-dad"}, "", ""),
 		// A child of this person's — present on /events but with role "parent"
 		// for childUUID, so it must be ignored when reading childUUID's parents.
-		familio.BirthEvent(nil, "uuid-grandchild", []string{childUUID}),
+		familio.BirthEvent(nil, "uuid-grandchild", []string{childUUID}, "", ""),
 	}
 	m := &ResourceModel{UUID: types.StringValue(childUUID)}
 	if diags := applyParentsToState(context.Background(), events, m); diags.HasError() {
@@ -181,11 +181,84 @@ func TestApplyParentsToState(t *testing.T) {
 	}
 
 	// No parents ⇒ null (matches an omitted config).
-	none := []familio.Event{familio.BirthEvent(nil, childUUID, nil)}
+	none := []familio.Event{familio.BirthEvent(nil, childUUID, nil, "", "")}
 	m2 := &ResourceModel{UUID: types.StringValue(childUUID)}
 	applyParentsToState(context.Background(), none, m2)
 	if !m2.Parents.IsNull() {
 		t.Errorf("0 parents should produce a null set, got %v", m2.Parents)
+	}
+}
+
+// TestEventsFromModelCarriesPlaces verifies that birth/death/christening places
+// flow onto their events, and that a place set WITHOUT a date still creates the
+// event (so a known place is never silently dropped).
+func TestEventsFromModelCarriesPlaces(t *testing.T) {
+	m := &ResourceModel{
+		Gender:           types.StringValue(familio.GenderMale),
+		BirthDate:        tfdate.ObjectFromRange(&familio.DateRange{Year: 1900}),
+		BirthPlace:       types.StringValue("sett-birth"),
+		DeathPlace:       types.StringValue("sett-death"), // place only, no death_date
+		ChristeningDate:  tfdate.ObjectFromRange(&familio.DateRange{Year: 1900}),
+		ChristeningPlace: types.StringValue("sett-bapt"),
+	}
+	events, diags := eventsFromModel(context.Background(), m)
+	if diags.HasError() {
+		t.Fatalf("unexpected diags: %v", diags)
+	}
+	byType := map[string]familio.Event{}
+	for _, e := range events {
+		byType[e.Type] = e
+	}
+	place := func(typ string) string {
+		e := byType[typ]
+		return e.SettlementUUID()
+	}
+	if got := place(familio.EventBirth); got != "sett-birth" {
+		t.Errorf("birth place = %q, want sett-birth", got)
+	}
+	death, ok := byType[familio.EventDeath]
+	if !ok {
+		t.Fatal("a death event should be created from death_place alone")
+	}
+	if death.SettlementUUID() != "sett-death" {
+		t.Errorf("death place = %q, want sett-death", death.SettlementUUID())
+	}
+	if death.Date.First != nil {
+		t.Errorf("place-only death event should have an unknown date, got %+v", death.Date.First)
+	}
+	if got := place(familio.EventBaptism); got != "sett-bapt" {
+		t.Errorf("christening place = %q, want sett-bapt", got)
+	}
+}
+
+// TestApplyEventsToStateReadsPlaces confirms places read back from the right
+// events (birth from the person's own birth event), and absent places are null.
+func TestApplyEventsToStateReadsPlaces(t *testing.T) {
+	const personUUID = "uuid-person"
+	events := []familio.Event{
+		// A child's birth event (person is parent) — must NOT be read as the
+		// person's own birth place/comment.
+		familio.BirthEvent(&familio.DateRange{Year: 1910}, "uuid-child", []string{personUUID}, "sett-child", "child note"),
+		familio.BirthEvent(&familio.DateRange{Year: 1889}, personUUID, nil, "sett-own", "own note"),
+		familio.DeathEvent(&familio.DateRange{Year: 1950}, personUUID, "sett-death", ""),
+	}
+	m := &ResourceModel{UUID: types.StringValue(personUUID)}
+	applyEventsToState(events, m)
+
+	if m.BirthPlace.ValueString() != "sett-own" {
+		t.Errorf("birth_place = %q, want sett-own (own birth event, not the child's)", m.BirthPlace.ValueString())
+	}
+	if m.BirthComment.ValueString() != "own note" {
+		t.Errorf("birth_comment = %q, want \"own note\" (own birth event, not the child's)", m.BirthComment.ValueString())
+	}
+	if m.DeathPlace.ValueString() != "sett-death" {
+		t.Errorf("death_place = %q, want sett-death", m.DeathPlace.ValueString())
+	}
+	if !m.DeathComment.IsNull() {
+		t.Errorf("death_comment should be null (empty comment), got %v", m.DeathComment)
+	}
+	if !m.ChristeningPlace.IsNull() {
+		t.Errorf("christening_place should be null (no baptism event), got %v", m.ChristeningPlace)
 	}
 }
 

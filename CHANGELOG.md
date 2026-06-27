@@ -1,3 +1,30 @@
+## 0.7.0
+
+FEATURES:
+
+* **`familio_person` can now record where a life event happened** — three new optional
+  attributes take a familio settlement UUID (the same id `familio_settlement_persons` / the
+  `familio_person` data source return):
+  * `birth_place` — familio's «Место рождения», recorded on the birth event.
+  * `death_place` — «Место смерти», on the death event.
+  * `christening_place` — on the «Крещение» (baptism) event.
+
+  Places edit **in place** (no resource replacement), ride the same event upsert as the date,
+  and read back without a permadiff. A place set without its date still records the event (e.g.
+  a known `death_place` with an unknown death date), so a known place is never silently dropped.
+  Internally the provider sends familio's required structured settlement object
+  (`{"uuid": …}`); a bare UUID string is rejected by the API, which is why this previously could
+  not be expressed.
+
+* **Event comments.** familio events carry a free-text comment (примечание); it is now
+  exposed everywhere the provider manages an event:
+  * `familio_person` — `birth_comment`, `death_comment`, `christening_comment` (edited in
+    place alongside the date/place).
+  * `familio_marriage` — `comment` on the wedding event (changing it forces replacement, like
+    the partners/date, until wedding events can be edited in place).
+
+  (`familio_event` already had `comment`.)
+
 ## 0.6.0
 
 FEATURES:

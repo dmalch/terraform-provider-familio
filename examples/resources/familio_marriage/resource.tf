@@ -7,4 +7,6 @@ resource "familio_marriage" "marriage" {
     month = 5
     day   = 12
   }
+
+  comment = "Венчание в Спасо-Преображенской церкви."
 }
