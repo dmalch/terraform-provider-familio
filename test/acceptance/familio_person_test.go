@@ -1,6 +1,7 @@
 package acceptance
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -106,6 +107,67 @@ resource "familio_person" "approx" {
 				Config: config,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
+// TestAccPerson_places exercises #12: birth/death/christening place set to real
+// familio settlement UUIDs. It statechecks the birth place, asserts an empty
+// re-plan (the structured settlement round-trips with no permadiff), then edits
+// the birth place in place and verifies the change. Uses real settlements:
+// Нижняя Верея and Верхняя Верея (Нижегородская область, город Выкса).
+func TestAccPerson_places(t *testing.T) {
+	const nizhnyayaVereya = "40d1b180-b739-4ecb-9ee5-ced6fefcd0d8"
+	const verkhnyayaVereya = "227e549f-56f3-4844-9d7f-db928cee93fd"
+	config := func(birthPlace string) string {
+		return fmt.Sprintf(`
+resource "familio_person" "place" {
+  first_name        = "АкцТест"
+  last_name         = "Местов"
+  gender            = "male"
+  privacy           = "invisible"
+  birth_date        = { year = 1900 }
+  birth_place       = %q
+  birth_comment     = "Метрическая книга, запись о рождении."
+  death_date        = { year = 1970 }
+  death_place       = %q
+  christening_date  = { year = 1900 }
+  christening_place = %q
+}`, birthPlace, nizhnyayaVereya, nizhnyayaVereya)
+	}
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
+		CheckDestroy:             checkPersonsDestroyed(t),
+		Steps: []resource.TestStep{
+			{
+				Config: config(nizhnyayaVereya),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("birth_place"), knownvalue.StringExact(nizhnyayaVereya)),
+					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("death_place"), knownvalue.StringExact(nizhnyayaVereya)),
+					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("christening_place"), knownvalue.StringExact(nizhnyayaVereya)),
+					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("birth_comment"), knownvalue.StringExact("Метрическая книга, запись о рождении.")),
+				},
+			},
+			{
+				// No permadiff: the structured settlement reads back to its uuid.
+				Config: config(nizhnyayaVereya),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+			{
+				// Edit the birth place in place (no resource replacement).
+				Config: config(verkhnyayaVereya),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("familio_person.place", plancheck.ResourceActionUpdate),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("birth_place"), knownvalue.StringExact(verkhnyayaVereya)),
 				},
 			},
 		},

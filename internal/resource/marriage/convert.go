@@ -29,3 +29,20 @@ func findWedding(events []familio.Event, uuid string) *familio.Event {
 	}
 	return nil
 }
+
+// commentValue returns the wedding comment to send, or "" when null/unknown.
+func commentValue(s types.String) string {
+	if s.IsNull() || s.IsUnknown() {
+		return ""
+	}
+	return s.ValueString()
+}
+
+// commentOrNull maps a wedding comment back to state, null when empty so an
+// omitted comment does not perpetually diff.
+func commentOrNull(comment string) types.String {
+	if comment == "" {
+		return types.StringNull()
+	}
+	return types.StringValue(comment)
+}

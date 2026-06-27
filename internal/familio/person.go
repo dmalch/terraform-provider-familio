@@ -81,7 +81,7 @@ type Event struct {
 	Type         string        `json:"type"`
 	Date         EventDate     `json:"date"`
 	Participants []Participant `json:"participants"`
-	Settlement   *string       `json:"settlement"`
+	Settlement   *Settlement   `json:"settlement"` // place (Место); nil ⇒ null (no place)
 	Comment      string        `json:"comment"`
 	CreatedAt    string        `json:"createdAt,omitempty"`
 	UpdatedAt    string        `json:"updatedAt,omitempty"`
@@ -142,52 +142,60 @@ type CreatePersonInput struct {
 // "parent"). familio upserts a person's single birth event by its child
 // participant, so POSTing this event replaces the whole event (participants +
 // date) in place — that is how parents are added/removed and the birth date is
-// edited without recreating the person.
-func BirthEvent(date *DateRange, childRef string, parents []string) Event {
+// edited without recreating the person. place is the birth settlement uuid (""
+// ⇒ no place) and comment is free text; like the date they are part of the event
+// and must be re-sent on every upsert (a full replace would otherwise clear them).
+func BirthEvent(date *DateRange, childRef string, parents []string, place, comment string) Event {
 	parts := []Participant{{PersonUUID: childRef, Role: RoleChild}}
 	for _, p := range parents {
 		parts = append(parts, Participant{PersonUUID: p, Role: RoleParent})
 	}
-	return Event{Type: EventBirth, Date: EventDateFromRange(date), Participants: parts}
+	return Event{Type: EventBirth, Date: EventDateFromRange(date), Participants: parts, Settlement: SettlementRef(place), Comment: comment}
 }
 
 // SelfBirthEvent builds the mandatory birth event for the person being created.
-// Pass nil for an unknown date.
-func SelfBirthEvent(date *DateRange) Event {
-	return BirthEvent(date, SelfRef, nil)
+// Pass nil for an unknown date and "" for no place/comment.
+func SelfBirthEvent(date *DateRange, place, comment string) Event {
+	return BirthEvent(date, SelfRef, nil, place, comment)
 }
 
 // DeathEvent builds a death event owned by ownerRef (SelfRef on create, or the
 // person's uuid when upserting an existing person's death event). Like the birth
-// event, re-POSTing it replaces the person's single death event in place.
-func DeathEvent(date *DateRange, ownerRef string) Event {
+// event, re-POSTing it replaces the person's single death event in place. place
+// is the death settlement uuid ("" ⇒ no place); comment is free text.
+func DeathEvent(date *DateRange, ownerRef, place, comment string) Event {
 	return Event{
 		Type:         EventDeath,
 		Date:         EventDateFromRange(date),
 		Participants: []Participant{{PersonUUID: ownerRef, Role: RoleOwner}},
+		Settlement:   SettlementRef(place),
+		Comment:      comment,
 	}
 }
 
 // SelfDeathEvent builds an optional death event for the person being created.
-func SelfDeathEvent(date *DateRange) Event {
-	return DeathEvent(date, SelfRef)
+func SelfDeathEvent(date *DateRange, place, comment string) Event {
+	return DeathEvent(date, SelfRef, place, comment)
 }
 
 // BaptismEvent builds a christening (familio "baptism") event owned by ownerRef
 // (SelfRef on create, or the person's uuid otherwise). Unlike birth/death, a
 // baptism is a repeatable fact event: re-POSTing does NOT replace it, so editing
-// a christening date means deleting the old event and creating a new one.
-func BaptismEvent(date *DateRange, ownerRef string) Event {
+// a christening date means deleting the old event and creating a new one. place
+// is the christening settlement uuid ("" ⇒ no place); comment is free text.
+func BaptismEvent(date *DateRange, ownerRef, place, comment string) Event {
 	return Event{
 		Type:         EventBaptism,
 		Date:         EventDateFromRange(date),
 		Participants: []Participant{{PersonUUID: ownerRef, Role: RoleOwner}},
+		Settlement:   SettlementRef(place),
+		Comment:      comment,
 	}
 }
 
 // SelfBaptismEvent builds an optional christening event for the person being created.
-func SelfBaptismEvent(date *DateRange) Event {
-	return BaptismEvent(date, SelfRef)
+func SelfBaptismEvent(date *DateRange, place, comment string) Event {
+	return BaptismEvent(date, SelfRef, place, comment)
 }
 
 // CreatePerson mints a new tree person (POST /api/v2/persons), owned by the

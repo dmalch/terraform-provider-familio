@@ -79,6 +79,19 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"christening_date": tfdate.Block("Christening (baptism) date — familio's «Крещение» "+
 				"event. Setting it records the event; removing it deletes it. Edited in place.", false),
 
+			"birth_place": placeAttribute("Birth place — familio's «Место рождения». The UUID of " +
+				"a familio settlement (the same id familio_settlement_persons / the familio_person " +
+				"data source speak). Recorded on the birth event; edited in place."),
+			"death_place": placeAttribute("Death place — familio's «Место смерти». A familio " +
+				"settlement UUID, recorded on the death event. A death_place set without a death_date " +
+				"still records the place (on a death event with an unknown date)."),
+			"christening_place": placeAttribute("Christening place — the settlement UUID recorded on " +
+				"the «Крещение» (baptism) event."),
+
+			"birth_comment":       commentAttribute("Free-text comment (примечание) on the birth event."),
+			"death_comment":       commentAttribute("Free-text comment on the death event."),
+			"christening_comment": commentAttribute("Free-text comment on the «Крещение» (baptism) event."),
+
 			"parents": schema.SetAttribute{
 				Description: "UUIDs of this person's parents (0–2). familio stores them as " +
 					"gender-agnostic participants on this person's birth event, so order does not " +
@@ -96,5 +109,24 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"created_at":   schema.StringAttribute{Computed: true, Description: "Creation timestamp."},
 			"updated_at":   schema.StringAttribute{Computed: true, Description: "Last update timestamp."},
 		},
+	}
+}
+
+// placeAttribute builds an optional settlement-UUID attribute for a life event's
+// place. The provider sends it to familio as the structured {"uuid": …} the API
+// requires (a bare uuid string is rejected), and reads the settlement uuid back.
+func placeAttribute(desc string) schema.StringAttribute {
+	return schema.StringAttribute{
+		Description: desc,
+		Optional:    true,
+	}
+}
+
+// commentAttribute builds an optional free-text comment attribute for a life
+// event. The comment rides the same event upsert as the date/place.
+func commentAttribute(desc string) schema.StringAttribute {
+	return schema.StringAttribute{
+		Description: desc,
+		Optional:    true,
 	}
 }

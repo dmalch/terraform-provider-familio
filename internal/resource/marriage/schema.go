@@ -39,6 +39,15 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			},
 			"marriage_date": tfdate.Block("Marriage date.", true),
 
+			"comment": schema.StringAttribute{
+				Description: "Free-text comment on the wedding event. Changing it forces replacement " +
+					"(event editing is not yet supported).",
+				Optional: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+
 			"created_at": schema.StringAttribute{Computed: true, Description: "Creation timestamp."},
 			"updated_at": schema.StringAttribute{Computed: true, Description: "Last update timestamp."},
 		},

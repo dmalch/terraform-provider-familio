@@ -29,7 +29,9 @@ func basicFromModel(m *ResourceModel) familio.BasicFields {
 }
 
 // eventsFromModel assembles the create events: the mandatory birth event (with
-// any parents) plus, when a death_date is set, a death event.
+// any parents and the birth place) plus a death/christening event when that
+// fact's date OR its place is set (a known place with an unknown date still
+// records the event).
 func eventsFromModel(ctx context.Context, m *ResourceModel) ([]familio.Event, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -37,19 +39,49 @@ func eventsFromModel(ctx context.Context, m *ResourceModel) ([]familio.Event, di
 	diags.Append(d...)
 	parents, dp := parentList(ctx, m.Parents)
 	diags.Append(dp...)
-	events := []familio.Event{familio.BirthEvent(birth, familio.SelfRef, parents)}
+	events := []familio.Event{familio.BirthEvent(birth, familio.SelfRef, parents, placeValue(m.BirthPlace), strValue(m.BirthComment))}
 
-	if !m.DeathDate.IsNull() && !m.DeathDate.IsUnknown() {
+	if hasDate(m.DeathDate) || hasPlace(m.DeathPlace) || hasStr(m.DeathComment) {
 		death, dd := tfdate.RangeFromObject(ctx, m.DeathDate)
 		diags.Append(dd...)
-		events = append(events, familio.SelfDeathEvent(death))
+		events = append(events, familio.SelfDeathEvent(death, placeValue(m.DeathPlace), strValue(m.DeathComment)))
 	}
-	if !m.ChristeningDate.IsNull() && !m.ChristeningDate.IsUnknown() {
+	if hasDate(m.ChristeningDate) || hasPlace(m.ChristeningPlace) || hasStr(m.ChristeningComment) {
 		bap, db := tfdate.RangeFromObject(ctx, m.ChristeningDate)
 		diags.Append(db...)
-		events = append(events, familio.SelfBaptismEvent(bap))
+		events = append(events, familio.SelfBaptismEvent(bap, placeValue(m.ChristeningPlace), strValue(m.ChristeningComment)))
 	}
 	return events, diags
+}
+
+// placeValue is the settlement uuid carried by a *_place attribute, or "" when
+// it is null/unknown (i.e. no place). It is an alias of strValue named for the
+// call site.
+func placeValue(s types.String) string {
+	return strValue(s)
+}
+
+// strValue returns an optional string attribute's value, or "" when null/unknown.
+func strValue(s types.String) string {
+	if s.IsNull() || s.IsUnknown() {
+		return ""
+	}
+	return s.ValueString()
+}
+
+// hasDate reports whether a nested date object is set (non-null/known).
+func hasDate(o types.Object) bool {
+	return !o.IsNull() && !o.IsUnknown()
+}
+
+// hasPlace reports whether a *_place attribute carries a settlement uuid.
+func hasPlace(s types.String) bool {
+	return hasStr(s)
+}
+
+// hasStr reports whether an optional string attribute carries a non-empty value.
+func hasStr(s types.String) bool {
+	return !s.IsNull() && !s.IsUnknown() && s.ValueString() != ""
 }
 
 // parentList converts the parents set into a slice of person uuids (nil when
@@ -79,12 +111,74 @@ func applyBasicToState(rec *familio.BasicRecord, m *ResourceModel) {
 	m.UpdatedAt = types.StringValue(rec.UpdatedAt)
 }
 
-// applyEventsToState sets birth_date/death_date/christening_date from a read-back
-// events slice.
+// applyEventsToState sets birth/death/christening dates and places from a
+// read-back events slice.
 func applyEventsToState(events []familio.Event, m *ResourceModel) {
-	m.BirthDate = tfdate.ObjectFromRange(ownBirthDate(events, m.UUID.ValueString()))
+	uuid := m.UUID.ValueString()
+	m.BirthDate = tfdate.ObjectFromRange(ownBirthDate(events, uuid))
 	m.DeathDate = tfdate.ObjectFromRange(eventDate(events, familio.EventDeath))
 	m.ChristeningDate = tfdate.ObjectFromRange(eventDate(events, familio.EventBaptism))
+	m.BirthPlace = ownBirthPlace(events, uuid)
+	m.DeathPlace = eventPlace(events, familio.EventDeath)
+	m.ChristeningPlace = eventPlace(events, familio.EventBaptism)
+	m.BirthComment = ownBirthComment(events, uuid)
+	m.DeathComment = eventComment(events, familio.EventDeath)
+	m.ChristeningComment = eventComment(events, familio.EventBaptism)
+}
+
+// ownBirthComment returns the comment on the person's OWN birth event, or null.
+func ownBirthComment(events []familio.Event, personUUID string) types.String {
+	birth := familio.OwnBirthEvent(events, personUUID)
+	if birth == nil {
+		return types.StringNull()
+	}
+	return strOrNull(birth.Comment)
+}
+
+// eventComment returns the comment on the first event of the given type, or null.
+func eventComment(events []familio.Event, typ string) types.String {
+	for i := range events {
+		if events[i].Type == typ {
+			return strOrNull(events[i].Comment)
+		}
+	}
+	return types.StringNull()
+}
+
+// ownBirthPlace returns the settlement uuid of the person's OWN birth event (the
+// one where they are the child — mirrors ownBirthDate), or null.
+func ownBirthPlace(events []familio.Event, personUUID string) types.String {
+	birth := familio.OwnBirthEvent(events, personUUID)
+	if birth == nil {
+		return types.StringNull()
+	}
+	return placeOrNull(birth.SettlementUUID())
+}
+
+// eventPlace returns the settlement uuid of the first event of the given type,
+// or null.
+func eventPlace(events []familio.Event, typ string) types.String {
+	for i := range events {
+		if events[i].Type == typ {
+			return placeOrNull(events[i].SettlementUUID())
+		}
+	}
+	return types.StringNull()
+}
+
+// placeOrNull maps a settlement uuid to a Terraform string (null when empty), so
+// an absent place reads back as null and matches an omitted config.
+func placeOrNull(uuid string) types.String {
+	return strOrNull(uuid)
+}
+
+// strOrNull maps a value to a Terraform string, returning null for "" so an
+// absent place/comment reads back as null and matches an omitted config.
+func strOrNull(s string) types.String {
+	if s == "" {
+		return types.StringNull()
+	}
+	return types.StringValue(s)
 }
 
 // applyParentsToState sets the parents set from this person's own birth event

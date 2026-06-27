@@ -27,6 +27,11 @@ resource "familio_person" "ivan" {
     day   = 14
   }
 
+  # Birth place — familio's «Место рождения». A familio settlement UUID (the same
+  # id the familio_settlement_persons data source returns). death_place and
+  # christening_place work the same way.
+  birth_place = "40d1b180-b739-4ecb-9ee5-ced6fefcd0d8" # Нижняя Верея
+
   # Christening / baptism (familio's «Крещение») event.
   christening_date = {
     year  = 1850
@@ -37,6 +42,11 @@ resource "familio_person" "ivan" {
   death_date = {
     year = 1911
   }
+  death_place = "40d1b180-b739-4ecb-9ee5-ced6fefcd0d8"
+
+  # Free-text comment (примечание) on a life event. birth_comment / death_comment /
+  # christening_comment are each recorded on their event.
+  birth_comment = "Записан в метрической книге села Нижняя Верея."
 }
 
 # A person with only a year of birth and a maiden surname.
@@ -105,11 +115,17 @@ resource "familio_person" "pyotr" {
 
 ### Optional
 
+- `birth_comment` (String) Free-text comment (примечание) on the birth event.
 - `birth_date` (Attributes) Birth date. (see [below for nested schema](#nestedatt--birth_date))
 - `birth_first_name` (String) Given name at birth (maiden), if different.
 - `birth_last_name` (String) Surname at birth (maiden), if different.
+- `birth_place` (String) Birth place — familio's «Место рождения». The UUID of a familio settlement (the same id familio_settlement_persons / the familio_person data source speak). Recorded on the birth event; edited in place.
+- `christening_comment` (String) Free-text comment on the «Крещение» (baptism) event.
 - `christening_date` (Attributes) Christening (baptism) date — familio's «Крещение» event. Setting it records the event; removing it deletes it. Edited in place. (see [below for nested schema](#nestedatt--christening_date))
+- `christening_place` (String) Christening place — the settlement UUID recorded on the «Крещение» (baptism) event.
+- `death_comment` (String) Free-text comment on the death event.
 - `death_date` (Attributes) Death date. Setting it records a death event; removing it deletes that event. (see [below for nested schema](#nestedatt--death_date))
+- `death_place` (String) Death place — familio's «Место смерти». A familio settlement UUID, recorded on the death event. A death_place set without a death_date still records the place (on a death event with an unknown date).
 - `first_name` (String) Given name (имя).
 - `last_name` (String) Surname (фамилия). NOTE: familio normalises capitalisation server-side.
 - `parents` (Set of String) UUIDs of this person's parents (0–2). familio stores them as gender-agnostic participants on this person's birth event, so order does not matter and a parent's father/mother role is inferred from their own gender. Each parent must already exist. Edited in place.

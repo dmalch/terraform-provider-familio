@@ -11,6 +11,7 @@ type ResourceModel struct {
 	UUID         types.String `tfsdk:"uuid"`
 	Partners     types.Set    `tfsdk:"partners"`
 	MarriageDate types.Object `tfsdk:"marriage_date"`
+	Comment      types.String `tfsdk:"comment"`
 	CreatedAt    types.String `tfsdk:"created_at"`
 	UpdatedAt    types.String `tfsdk:"updated_at"`
 }

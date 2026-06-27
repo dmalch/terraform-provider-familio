@@ -12,6 +12,11 @@ resource "familio_person" "ivan" {
     day   = 14
   }
 
+  # Birth place — familio's «Место рождения». A familio settlement UUID (the same
+  # id the familio_settlement_persons data source returns). death_place and
+  # christening_place work the same way.
+  birth_place = "40d1b180-b739-4ecb-9ee5-ced6fefcd0d8" # Нижняя Верея
+
   # Christening / baptism (familio's «Крещение») event.
   christening_date = {
     year  = 1850
@@ -22,6 +27,11 @@ resource "familio_person" "ivan" {
   death_date = {
     year = 1911
   }
+  death_place = "40d1b180-b739-4ecb-9ee5-ced6fefcd0d8"
+
+  # Free-text comment (примечание) on a life event. birth_comment / death_comment /
+  # christening_comment are each recorded on their event.
+  birth_comment = "Записан в метрической книге села Нижняя Верея."
 }
 
 # A person with only a year of birth and a maiden surname.
