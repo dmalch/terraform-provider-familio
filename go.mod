@@ -7,8 +7,8 @@ require (
 	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
-	github.com/steipete/sweetcookie v0.0.0-20260510235359-220637598a9d
-	golang.org/x/time v0.9.0
+	github.com/steipete/sweetcookie v0.0.1
+	golang.org/x/time v0.15.0
 )
 
 require (
