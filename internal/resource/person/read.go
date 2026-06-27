@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/dmalch/terraform-provider-familio/internal/familio"
 )
@@ -16,7 +17,9 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-	person, err := r.client.GetPerson(ctx, state.UUID.ValueString())
+	uuid := state.UUID.ValueString()
+
+	basic, err := r.client.GetPersonBasic(ctx, uuid)
 	if err != nil {
 		if errors.Is(err, familio.ErrNotFound) {
 			resp.State.RemoveResource(ctx)
@@ -25,7 +28,21 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading familio_person", err.Error())
 		return
 	}
+	applyBasicToState(basic, &state)
 
-	applyToState(person, &state)
+	// Display name lives on the regularPerson view, not /basic.
+	if display, err := r.client.GetPersonDisplay(ctx, uuid); err != nil {
+		resp.Diagnostics.AddWarning("Could not read familio_person display name", err.Error())
+	} else {
+		state.DisplayName = types.StringValue(display.DisplayName)
+	}
+
+	// Birth/death dates come from the events sub-resource.
+	if events, err := r.client.GetPersonEvents(ctx, uuid); err != nil {
+		resp.Diagnostics.AddWarning("Could not read familio_person events", err.Error())
+	} else {
+		applyEventsToState(events, &state)
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }

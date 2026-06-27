@@ -1,8 +1,9 @@
-// Package person implements the familio_person resource. In this first
-// (read-only) milestone, Read and import work against familio.org's public
-// person data, while Create/Update/Delete return an explicit "write not yet
-// implemented" diagnostic until the tree-editor mutation API is reverse-
-// engineered (see internal/familio/API.md).
+// Package person implements the familio_person resource: full create / read /
+// update / delete against familio.org's tree-editor API (see
+// internal/familio/API.md). Birth/death dates are managed as nested date blocks
+// (life events); changing one forces replacement because event editing is not
+// yet wired up. Relationships (parents, spouses) are events too and are handled
+// by a separate resource.
 package person
 
 import (

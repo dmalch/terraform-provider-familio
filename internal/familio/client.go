@@ -16,6 +16,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -30,11 +31,22 @@ const (
 )
 
 // Client talks to familio.org's /api/v2 surface with a session cookie.
+//
+// Authenticated calls need a JWT bearer, which familio does not mint via an API
+// endpoint — it embeds it in the page's __NEXT_DATA__. The client scrapes it
+// (using the session cookie) on first use and re-scrapes when it nears expiry;
+// see auth.go.
 type Client struct {
 	httpClient *http.Client
 	baseURL    *url.URL
 	userAgent  string
 	limiter    *rate.Limiter
+
+	// token cache (guarded by mu)
+	mu       sync.Mutex
+	token    string
+	tokenExp time.Time
+	userUUID string // current account uuid, from the JWT — used as ?owner=
 }
 
 // Options configures a Client. At least one cookie carrying the `t` session

@@ -70,7 +70,9 @@ func TestDoReturnsErrNotFound(t *testing.T) {
 	defer srv.Close()
 
 	client, _ := NewClient(Options{BaseURL: srv.URL + "/", RateLimit: 1000})
-	_, err := client.GetPerson(context.Background(), "missing")
+	// ListSettlementPersons uses the public (no-bearer) path, so the 404 maps
+	// straight through the transport to ErrNotFound.
+	_, err := client.ListSettlementPersons(context.Background(), "missing")
 	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("got %v, want ErrNotFound", err)
 	}

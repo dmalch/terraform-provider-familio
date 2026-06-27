@@ -44,6 +44,26 @@ func (c *Client) newRequest(ctx context.Context, method, path string, query url.
 	return req, nil
 }
 
+// newAuthedRequest builds a request like newRequest but for the authenticated,
+// API-Platform/Hydra tree-editor endpoints: it negotiates application/ld+json
+// and attaches the scraped JWT bearer (fetching one if needed).
+func (c *Client) newAuthedRequest(ctx context.Context, method, path string, query url.Values, body any) (*http.Request, error) {
+	req, err := c.newRequest(ctx, method, path, query, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/ld+json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/ld+json")
+	}
+	token, err := c.bearerToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	return req, nil
+}
+
 // do executes req (honoring the rate limiter, with a small retry on 429/5xx)
 // and decodes a JSON response into out (out may be nil to discard the body).
 func (c *Client) do(req *http.Request, out any) error {

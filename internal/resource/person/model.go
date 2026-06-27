@@ -1,29 +1,40 @@
 package person
 
-import "github.com/hashicorp/terraform-plugin-framework/types"
+import (
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+)
 
-// ResourceModel is the familio_person state.
-//
-// first_name / last_name / patronymic / gender / father_uuid / mother_uuid are
-// config-only for now: the public read endpoint returns only display-level
-// fields, so Read does not populate them. The write-API spike (Phase 0.5) will
-// reveal the editable person-detail fields and wire them through Read.
+// ResourceModel is the familio_person state. It maps to familio's "basic"
+// person fields plus the birth/death life events (modelled as nested date
+// blocks). Relationships (parents/spouse) are events too and are deferred to a
+// dedicated resource — see internal/familio/API.md.
 type ResourceModel struct {
-	UUID             types.String `tfsdk:"uuid"`
-	FirstName        types.String `tfsdk:"first_name"`
-	LastName         types.String `tfsdk:"last_name"`
-	Patronymic       types.String `tfsdk:"patronymic"`
-	Gender           types.String `tfsdk:"gender"`
-	BirthSettlement  types.String `tfsdk:"birth_settlement"`
-	FatherUUID       types.String `tfsdk:"father_uuid"`
-	MotherUUID       types.String `tfsdk:"mother_uuid"`
-	DisplayName      types.String `tfsdk:"display_name"`
-	ShortDisplayName types.String `tfsdk:"short_display_name"`
-	BirthDate        types.String `tfsdk:"birth_date"`
-	DeathDate        types.String `tfsdk:"death_date"`
-	HasDeathEvent    types.Bool   `tfsdk:"has_death_event"`
-	CatalogKey       types.String `tfsdk:"catalog_key"`
-	CatalogName      types.String `tfsdk:"catalog_name"`
-	Type             types.String `tfsdk:"type"`
-	UpdatedAt        types.String `tfsdk:"updated_at"`
+	UUID           types.String `tfsdk:"uuid"`
+	FirstName      types.String `tfsdk:"first_name"`
+	LastName       types.String `tfsdk:"last_name"`
+	Patronymic     types.String `tfsdk:"patronymic"`
+	BirthFirstName types.String `tfsdk:"birth_first_name"`
+	BirthLastName  types.String `tfsdk:"birth_last_name"`
+	Gender         types.String `tfsdk:"gender"`
+	Privacy        types.String `tfsdk:"privacy"`
+	BirthDate      types.Object `tfsdk:"birth_date"`
+	DeathDate      types.Object `tfsdk:"death_date"`
+	DisplayName    types.String `tfsdk:"display_name"`
+	CreatedAt      types.String `tfsdk:"created_at"`
+	UpdatedAt      types.String `tfsdk:"updated_at"`
+}
+
+// dateModel is one nested birth_date/death_date block.
+type dateModel struct {
+	Year  types.Int64 `tfsdk:"year"`
+	Month types.Int64 `tfsdk:"month"`
+	Day   types.Int64 `tfsdk:"day"`
+}
+
+// dateAttrTypes is the attr-type map for the nested date object.
+var dateAttrTypes = map[string]attr.Type{
+	"year":  types.Int64Type,
+	"month": types.Int64Type,
+	"day":   types.Int64Type,
 }
