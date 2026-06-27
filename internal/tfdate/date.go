@@ -1,5 +1,5 @@
 // Package tfdate bridges familio's complex-date model and a Terraform nested
-// {year, month, day} attribute, shared by the person and union resources.
+// {year, month, day} attribute, shared by the person and marriage resources.
 package tfdate
 
 import (

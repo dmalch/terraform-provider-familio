@@ -1,4 +1,4 @@
-package union
+package marriage
 
 import (
 	"context"
@@ -17,9 +17,9 @@ import (
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "A union (marriage/partnership) linking two persons in a familio.org family " +
-			"tree. Modelled as a wedding event between the partners. Changing the partners or the " +
-			"marriage date forces replacement (event editing is not yet supported).",
+		Description: "A marriage between two persons in a familio.org family tree, modelled as the " +
+			"wedding event that links the partners. Changing the partners or the marriage date forces " +
+			"replacement (event editing is not yet supported).",
 		Attributes: map[string]schema.Attribute{
 			"uuid": schema.StringAttribute{
 				Description:   "The underlying wedding-event UUID.",

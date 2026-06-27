@@ -1,4 +1,4 @@
-package union
+package marriage
 
 import (
 	"context"
@@ -26,14 +26,14 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 	if len(partners) != 2 {
-		resp.Diagnostics.AddError("Invalid familio_union", "partners must contain exactly two person UUIDs")
+		resp.Diagnostics.AddError("Invalid familio_marriage", "partners must contain exactly two person UUIDs")
 		return
 	}
 
 	event := familio.WeddingEvent(date, partners[0], partners[1])
 	created, err := r.client.CreateEvent(ctx, partners[0], event)
 	if err != nil {
-		resp.Diagnostics.AddError("Cannot create familio_union", err.Error())
+		resp.Diagnostics.AddError("Cannot create familio_marriage", err.Error())
 		return
 	}
 
@@ -67,7 +67,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("Error reading familio_union", err.Error())
+		resp.Diagnostics.AddError("Error reading familio_marriage", err.Error())
 		return
 	}
 
@@ -126,7 +126,7 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 
 	err := r.client.DeleteEvent(ctx, partners[0], state.UUID.ValueString())
 	if err != nil && !errors.Is(err, familio.ErrNotFound) {
-		resp.Diagnostics.AddError("Cannot delete familio_union", err.Error())
+		resp.Diagnostics.AddError("Cannot delete familio_marriage", err.Error())
 		return
 	}
 	resp.State.RemoveResource(ctx)

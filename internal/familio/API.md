@@ -129,11 +129,11 @@ normal `POST /api/v2/persons?owner=<userId>` whose `events[]` carries the relati
 the existing person as the other `spouse`, or birth with the existing person as parent/child). So
 **creating a related person + the link is one atomic person-create.**
 
-⇒ Provider modelling: there is no `familio_union`. Either (a) a `familio_marriage`/`familio_event`
-resource that POSTs a `wedding` event between two existing persons, or (b) fold relationships into
-`familio_person` (parents/spouse attributes). **Open:** linking two *already-existing* persons (no new
-person) → almost certainly `POST/PUT /api/v2/persons/<uuid>/events` with the event body above (the
-`/events` GET sub-resource exists); needs one confirming capture/probe.
+⇒ Provider modelling (decided): there is no `familio_union` object, so marriage is the
+**`familio_marriage`** association resource — it POSTs a `wedding` event between two existing persons
+(`POST /api/v2/persons/<uuid>/events`, confirmed below). Single-subject life facts (birth/death) are
+folded into `familio_person`. Parent↔child links (a child's birth event carrying parent participants)
+are deferred to future `father`/`mother` attributes on the person that owns that birth event.
 
 ### Dates
 `{ calendar:"gregorian"|"julian", type:"equal"|"exact"|…, first:{day,month,year,type}|null, second:null }`;

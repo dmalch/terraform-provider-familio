@@ -1,10 +1,10 @@
-// Package union implements the familio_union resource: a marriage/partnership
-// between two persons, which familio models as a "wedding" event with two
-// spouse participants (see internal/familio/API.md). Create posts the event,
-// Read finds it on a partner's event list, Delete removes it. Changing the
-// partners or marriage date forces replacement, since event editing is not yet
-// implemented.
-package union
+// Package marriage implements the familio_marriage resource: a marriage between
+// two persons, which familio models as a "wedding" event with two spouse
+// participants (see internal/familio/API.md). It is an association resource —
+// Create posts the event, Read finds it on a partner's event list, Delete
+// removes it. Changing the partners or marriage date forces replacement, since
+// event editing is not yet implemented.
+package marriage
 
 import (
 	"context"
@@ -21,12 +21,12 @@ type Resource struct {
 	client *familio.Client
 }
 
-func NewUnionResource() resource.Resource {
+func NewMarriageResource() resource.Resource {
 	return &Resource{}
 }
 
 func (r *Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_union"
+	resp.TypeName = req.ProviderTypeName + "_marriage"
 }
 
 func (r *Resource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

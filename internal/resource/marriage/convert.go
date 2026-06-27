@@ -1,4 +1,4 @@
-package union
+package marriage
 
 import (
 	"context"

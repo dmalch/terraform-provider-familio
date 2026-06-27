@@ -1,13 +1,11 @@
 // Package familio is the inlined HTTP client for familio.org, used by the
-// Terraform provider. It mirrors the cookie-auth model of go-geni's web client
-// (a session `t` cookie installed on a jar scoped to https://familio.org/),
-// rather than Geni's OAuth flow.
+// Terraform provider. Auth is two-layer: a session `t` cookie (installed on a
+// jar scoped to https://familio.org/) bootstraps a JWT bearer scraped from the
+// page's __NEXT_DATA__ (see auth.go), which authenticates the /api/v2 calls.
 //
-// Today only the read path is implemented: the public, paginated
-// GET /api/v2/persons?settlement=<uuid> endpoint. The tree-editor mutation
-// endpoints (create/update/delete persons and unions) are not yet
-// reverse-engineered; every write method returns ErrWriteNotImplemented until
-// the Phase 0.5 discovery spike documents them in API.md.
+// It covers the public settlement-persons read plus full person CRUD and the
+// wedding-event (marriage) endpoints behind the person and marriage resources.
+// See API.md for the endpoint reference.
 package familio
 
 import (
