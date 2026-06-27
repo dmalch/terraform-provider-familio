@@ -3,6 +3,7 @@ package familio
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -21,7 +22,9 @@ func TestListSettlementPersonsPaginates(t *testing.T) {
 		gotCookie = r.Header.Get("Cookie")
 
 		page := 1
-		fmt.Sscanf(r.URL.Query().Get("page"), "%d", &page)
+		if _, err := fmt.Sscanf(r.URL.Query().Get("page"), "%d", &page); err != nil {
+			page = 1
+		}
 
 		start := (page - 1) * settlementPageSize
 		end := start + settlementPageSize
@@ -68,7 +71,7 @@ func TestDoReturnsErrNotFound(t *testing.T) {
 
 	client, _ := NewClient(Options{BaseURL: srv.URL + "/", RateLimit: 1000})
 	_, err := client.GetPerson(context.Background(), "missing")
-	if err != ErrNotFound {
+	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("got %v, want ErrNotFound", err)
 	}
 }

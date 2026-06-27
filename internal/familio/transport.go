@@ -119,9 +119,9 @@ func retryBackoff(attempt int) time.Duration {
 }
 
 func snippet(b []byte) string {
-	const max = 300
-	if len(b) > max {
-		return string(b[:max]) + "…"
+	const limit = 300
+	if len(b) > limit {
+		return string(b[:limit]) + "…"
 	}
 	return string(b)
 }
