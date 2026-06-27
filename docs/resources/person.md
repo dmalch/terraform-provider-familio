@@ -27,6 +27,13 @@ resource "familio_person" "ivan" {
     day   = 14
   }
 
+  # Christening / baptism (familio's «Крещение») event.
+  christening_date = {
+    year  = 1850
+    month = 3
+    day   = 21
+  }
+
   death_date = {
     year = 1911
   }
@@ -78,6 +85,7 @@ resource "familio_person" "pyotr" {
 - `birth_date` (Attributes) Birth date. (see [below for nested schema](#nestedatt--birth_date))
 - `birth_first_name` (String) Given name at birth (maiden), if different.
 - `birth_last_name` (String) Surname at birth (maiden), if different.
+- `christening_date` (Attributes) Christening (baptism) date — familio's «Крещение» event. Setting it records the event; removing it deletes it. Edited in place. (see [below for nested schema](#nestedatt--christening_date))
 - `death_date` (Attributes) Death date. Setting it records a death event; removing it deletes that event. (see [below for nested schema](#nestedatt--death_date))
 - `first_name` (String) Given name (имя).
 - `last_name` (String) Surname (фамилия). NOTE: familio normalises capitalisation server-side.
@@ -94,6 +102,19 @@ resource "familio_person" "pyotr" {
 
 <a id="nestedatt--birth_date"></a>
 ### Nested Schema for `birth_date`
+
+Required:
+
+- `year` (Number) Year (e.g. 1900).
+
+Optional:
+
+- `day` (Number) Day of month, 1-31.
+- `month` (Number) Month, 1-12.
+
+
+<a id="nestedatt--christening_date"></a>
+### Nested Schema for `christening_date`
 
 Required:
 

@@ -19,6 +19,7 @@ const (
 const (
 	EventBirth   = "birth"
 	EventDeath   = "death"
+	EventBaptism = "baptism" // христианское крещение (christening)
 	EventWedding = "wedding"
 
 	RoleChild  = "child"
@@ -177,6 +178,23 @@ func DeathEvent(date *DatePart, ownerRef string) Event {
 // SelfDeathEvent builds an optional death event for the person being created.
 func SelfDeathEvent(date *DatePart) Event {
 	return DeathEvent(date, SelfRef)
+}
+
+// BaptismEvent builds a christening (familio "baptism") event owned by ownerRef
+// (SelfRef on create, or the person's uuid otherwise). Unlike birth/death, a
+// baptism is a repeatable fact event: re-POSTing does NOT replace it, so editing
+// a christening date means deleting the old event and creating a new one.
+func BaptismEvent(date *DatePart, ownerRef string) Event {
+	return Event{
+		Type:         EventBaptism,
+		Date:         equalDate(date),
+		Participants: []Participant{{PersonUUID: ownerRef, Role: RoleOwner}},
+	}
+}
+
+// SelfBaptismEvent builds an optional christening event for the person being created.
+func SelfBaptismEvent(date *DatePart) Event {
+	return BaptismEvent(date, SelfRef)
 }
 
 // CreatePerson mints a new tree person (POST /api/v2/persons), owned by the

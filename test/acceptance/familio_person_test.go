@@ -20,17 +20,19 @@ func TestAccPerson_basic(t *testing.T) {
 			{
 				Config: `
 resource "familio_person" "test" {
-  first_name = "АкцТест"
-  last_name  = "Персонов"
-  gender     = "male"
-  privacy    = "invisible"
-  birth_date = { year = 1850 }
+  first_name       = "АкцТест"
+  last_name        = "Персонов"
+  gender           = "male"
+  privacy          = "invisible"
+  birth_date       = { year = 1850 }
+  christening_date = { year = 1850, month = 4 }
 }`,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("first_name"), knownvalue.StringExact("АкцТест")),
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("last_name"), knownvalue.StringExact("Персонов")),
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("gender"), knownvalue.StringExact("male")),
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("birth_date").AtMapKey("year"), knownvalue.Int64Exact(1850)),
+					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("christening_date").AtMapKey("month"), knownvalue.Int64Exact(4)),
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("uuid"), knownvalue.NotNull()),
 				},
 			},
@@ -39,12 +41,13 @@ resource "familio_person" "test" {
 				// optimistic-lock header) and add a death date (event upsert).
 				Config: `
 resource "familio_person" "test" {
-  first_name = "АкцТестИзм"
-  last_name  = "Персонов"
-  gender     = "male"
-  privacy    = "invisible"
-  birth_date = { year = 1850 }
-  death_date = { year = 1899 }
+  first_name       = "АкцТестИзм"
+  last_name        = "Персонов"
+  gender           = "male"
+  privacy          = "invisible"
+  birth_date       = { year = 1850 }
+  death_date       = { year = 1899 }
+  christening_date = { year = 1851 }
 }`,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -54,6 +57,8 @@ resource "familio_person" "test" {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("first_name"), knownvalue.StringExact("АкцТестИзм")),
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("death_date").AtMapKey("year"), knownvalue.Int64Exact(1899)),
+					// christening edited in place (delete + recreate the baptism event).
+					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("christening_date").AtMapKey("year"), knownvalue.Int64Exact(1851)),
 				},
 			},
 			{

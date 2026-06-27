@@ -71,6 +71,34 @@ func TestEventsFromModelWithDates(t *testing.T) {
 	}
 }
 
+func TestEventsFromModelWithChristening(t *testing.T) {
+	m := &ResourceModel{
+		Gender:          types.StringValue(familio.GenderMale),
+		BirthDate:       types.ObjectNull(tfdate.AttrTypes),
+		DeathDate:       types.ObjectNull(tfdate.AttrTypes),
+		ChristeningDate: tfdate.Object(&familio.DatePart{Year: 1881}),
+	}
+	events, diags := eventsFromModel(context.Background(), m)
+	if diags.HasError() {
+		t.Fatalf("unexpected diags: %v", diags)
+	}
+	var bap *familio.Event
+	for i := range events {
+		if events[i].Type == familio.EventBaptism {
+			bap = &events[i]
+		}
+	}
+	if bap == nil {
+		t.Fatalf("want a baptism event, got %+v", events)
+	}
+	if bap.Date.First == nil || bap.Date.First.Year != 1881 {
+		t.Errorf("christening year wrong: %+v", bap.Date.First)
+	}
+	if len(bap.Participants) != 1 || bap.Participants[0].Role != familio.RoleOwner {
+		t.Errorf("christening participant should be the owner, got %+v", bap.Participants)
+	}
+}
+
 func TestEventsFromModelWithParents(t *testing.T) {
 	parents := types.SetValueMust(types.StringType, []attr.Value{
 		types.StringValue("uuid-dad"), types.StringValue("uuid-mom"),

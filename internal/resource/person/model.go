@@ -7,18 +7,19 @@ import "github.com/hashicorp/terraform-plugin-framework/types"
 // blocks). Relationships (parents/spouse) are events too and are managed
 // elsewhere — see the familio_marriage resource and internal/familio/API.md.
 type ResourceModel struct {
-	UUID           types.String `tfsdk:"uuid"`
-	FirstName      types.String `tfsdk:"first_name"`
-	LastName       types.String `tfsdk:"last_name"`
-	Patronymic     types.String `tfsdk:"patronymic"`
-	BirthFirstName types.String `tfsdk:"birth_first_name"`
-	BirthLastName  types.String `tfsdk:"birth_last_name"`
-	Gender         types.String `tfsdk:"gender"`
-	Privacy        types.String `tfsdk:"privacy"`
-	BirthDate      types.Object `tfsdk:"birth_date"`
-	DeathDate      types.Object `tfsdk:"death_date"`
-	Parents        types.Set    `tfsdk:"parents"`
-	DisplayName    types.String `tfsdk:"display_name"`
-	CreatedAt      types.String `tfsdk:"created_at"`
-	UpdatedAt      types.String `tfsdk:"updated_at"`
+	UUID            types.String `tfsdk:"uuid"`
+	FirstName       types.String `tfsdk:"first_name"`
+	LastName        types.String `tfsdk:"last_name"`
+	Patronymic      types.String `tfsdk:"patronymic"`
+	BirthFirstName  types.String `tfsdk:"birth_first_name"`
+	BirthLastName   types.String `tfsdk:"birth_last_name"`
+	Gender          types.String `tfsdk:"gender"`
+	Privacy         types.String `tfsdk:"privacy"`
+	BirthDate       types.Object `tfsdk:"birth_date"`
+	DeathDate       types.Object `tfsdk:"death_date"`
+	ChristeningDate types.Object `tfsdk:"christening_date"`
+	Parents         types.Set    `tfsdk:"parents"`
+	DisplayName     types.String `tfsdk:"display_name"`
+	CreatedAt       types.String `tfsdk:"created_at"`
+	UpdatedAt       types.String `tfsdk:"updated_at"`
 }

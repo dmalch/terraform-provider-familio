@@ -44,6 +44,11 @@ func eventsFromModel(ctx context.Context, m *ResourceModel) ([]familio.Event, di
 		diags.Append(dd...)
 		events = append(events, familio.SelfDeathEvent(death))
 	}
+	if !m.ChristeningDate.IsNull() && !m.ChristeningDate.IsUnknown() {
+		bap, db := tfdate.PartFromObject(ctx, m.ChristeningDate)
+		diags.Append(db...)
+		events = append(events, familio.SelfBaptismEvent(bap))
+	}
 	return events, diags
 }
 
@@ -74,10 +79,12 @@ func applyBasicToState(rec *familio.BasicRecord, m *ResourceModel) {
 	m.UpdatedAt = types.StringValue(rec.UpdatedAt)
 }
 
-// applyEventsToState sets birth_date/death_date from a read-back events slice.
+// applyEventsToState sets birth_date/death_date/christening_date from a read-back
+// events slice.
 func applyEventsToState(events []familio.Event, m *ResourceModel) {
 	m.BirthDate = tfdate.Object(eventDatePart(events, familio.EventBirth))
 	m.DeathDate = tfdate.Object(eventDatePart(events, familio.EventDeath))
+	m.ChristeningDate = tfdate.Object(eventDatePart(events, familio.EventBaptism))
 }
 
 // applyParentsToState sets the parents set from this person's own birth event

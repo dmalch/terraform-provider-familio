@@ -169,6 +169,23 @@ Standalone life events — including linking two **existing** persons:
 
 `POST /api/v2/events` (no person prefix) → **404**; events are strictly a person sub-resource.
 
+### Event-type catalogue (~50 types) + christening (CONFIRMED, replayed)
+familio's editor enumerates ~50 event `type`s (from the `_app` JS chunk, key → Russian label):
+`birth` Рождение, `death` Смерть, `baptism` **Крещение (christening)**, `burial` Похороны,
+`wedding` Бракосочетание, `divorce` Развод, `affiance` оглашение, `nikah` Никах,
+`confirmation` Конфирмация, `naming` Имянаречение, `location` Место жительства (residence),
+`education` Образование, `profession`/`occupation` работа, `militaryService` Военная служба,
+`militaryAward` Военная награда, `conscription` Призыв, `captured` Плен, `missing` Пропал без
+вести, `godparent` Восприемник, `award`, `arrest`, `crime`, `condemnation`, `citizenship`,
+`immigration`/`emigration`, `hajj`, `circumcision`, … — most are exposed by the provider only as
+needed. **Two event "classes":**
+- **Unique/keyed:** `birth` (keyed by the `child` participant) and `death` (one per person) —
+  re-POST **upserts** (replace in place). Birth is mandatory (DELETE → 409).
+- **Repeatable facts:** `baptism` and the rest — re-POST **does NOT upsert, it duplicates**
+  (n→2). Single-subject facts use `role:"owner"`. To edit in place: **DELETE the old event +
+  POST a new one** (DELETE → 204). `familio_person.christening_date` (a `baptism` event) is
+  managed this way.
+
 ## Remaining gaps (minor)
 
 1. **Wedding-event in-place edit** — the marriage resource still uses RequiresReplace for

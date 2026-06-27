@@ -12,6 +12,13 @@ resource "familio_person" "ivan" {
     day   = 14
   }
 
+  # Christening / baptism (familio's «Крещение») event.
+  christening_date = {
+    year  = 1850
+    month = 3
+    day   = 21
+  }
+
   death_date = {
     year = 1911
   }

@@ -62,6 +62,15 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 	}
 
+	// The christening (baptism) event does not upsert (re-POSTing duplicates it),
+	// so reconcile by deleting any existing baptism event and recreating it.
+	if !plan.ChristeningDate.Equal(state.ChristeningDate) {
+		r.reconcileChristening(ctx, uuid, plan.ChristeningDate, resp)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Refresh server-computed fields (names normalisation, timestamps, display
 	// name) after the writes above. Dates/parents already reflect the plan.
 	if basic, err := r.client.GetPersonBasic(ctx, uuid); err != nil {
@@ -118,5 +127,35 @@ func (r *Resource) reconcileDeath(ctx context.Context, uuid string, deathDate ty
 			}
 			return
 		}
+	}
+}
+
+// reconcileChristening rewrites the person's baptism event: it deletes any
+// existing baptism event(s) (the event is repeatable and does not upsert) and,
+// when christeningDate is set, creates a fresh one.
+func (r *Resource) reconcileChristening(ctx context.Context, uuid string, christeningDate types.Object, resp *resource.UpdateResponse) {
+	events, err := r.client.GetPersonEvents(ctx, uuid)
+	if err != nil {
+		resp.Diagnostics.AddError("Cannot read familio_person events before updating christening", err.Error())
+		return
+	}
+	for i := range events {
+		if events[i].Type == familio.EventBaptism {
+			if err := r.client.DeleteEvent(ctx, uuid, events[i].ID()); err != nil {
+				resp.Diagnostics.AddError("Cannot delete familio_person christening event", err.Error())
+				return
+			}
+		}
+	}
+	if christeningDate.IsNull() || christeningDate.IsUnknown() {
+		return
+	}
+	part, d := tfdate.PartFromObject(ctx, christeningDate)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if _, err := r.client.CreateEvent(ctx, uuid, familio.BaptismEvent(part, uuid)); err != nil {
+		resp.Diagnostics.AddError("Cannot create familio_person christening event", err.Error())
 	}
 }

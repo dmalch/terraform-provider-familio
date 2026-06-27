@@ -76,6 +76,8 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"birth_date": tfdate.Block("Birth date.", false),
 			"death_date": tfdate.Block("Death date. Setting it records a death event; "+
 				"removing it deletes that event.", false),
+			"christening_date": tfdate.Block("Christening (baptism) date — familio's «Крещение» "+
+				"event. Setting it records the event; removing it deletes it. Edited in place.", false),
 
 			"parents": schema.SetAttribute{
 				Description: "UUIDs of this person's parents (0–2). familio stores them as " +

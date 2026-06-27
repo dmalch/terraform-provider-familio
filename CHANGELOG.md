@@ -1,3 +1,12 @@
+## 0.3.0
+
+FEATURES:
+
+* **`familio_person` gains `christening_date`** — a person's baptism (familio's «Крещение»)
+  event, as a nested `{year, month, day}` block. Set it to record the christening, remove it
+  to delete the event. Edited in place (unlike birth/death, a baptism event does not upsert, so
+  a change deletes and recreates it).
+
 ## 0.2.0
 
 FEATURES:

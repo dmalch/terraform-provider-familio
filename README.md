@@ -20,7 +20,8 @@ from the tree editor (see [`internal/familio/API.md`](internal/familio/API.md)).
 | `familio_marriage` — full CRUD + import | ✅ works |
 
 `familio_marriage` is an association resource: a marriage is the `wedding` event linking
-two persons. Birth and death are life facts folded into `familio_person`, and a person's
+two persons. Birth, death and christening (baptism / «Крещение») are life facts folded into
+`familio_person`, and a person's
 **parents** are managed there too via the `parents` set (0–2 person UUIDs) — familio stores
 them as gender-agnostic participants on the child's birth event, so the role (father/mother)
 is inferred from each parent's own gender. Birth/death dates and parents are edited **in
