@@ -51,8 +51,8 @@ func TestEventsFromModelWithDates(t *testing.T) {
 	day := 15
 	m := &ResourceModel{
 		Gender:    types.StringValue(familio.GenderMale),
-		BirthDate: tfdate.Object(&familio.DatePart{Year: 1900, Month: &month, Day: &day}),
-		DeathDate: tfdate.Object(&familio.DatePart{Year: 1971}),
+		BirthDate: tfdate.ObjectFromRange(&familio.DateRange{Year: 1900, Month: &month, Day: &day}),
+		DeathDate: tfdate.ObjectFromRange(&familio.DateRange{Year: 1971}),
 	}
 	events, diags := eventsFromModel(context.Background(), m)
 	if diags.HasError() {
@@ -76,7 +76,7 @@ func TestEventsFromModelWithChristening(t *testing.T) {
 		Gender:          types.StringValue(familio.GenderMale),
 		BirthDate:       types.ObjectNull(tfdate.AttrTypes),
 		DeathDate:       types.ObjectNull(tfdate.AttrTypes),
-		ChristeningDate: tfdate.Object(&familio.DatePart{Year: 1881}),
+		ChristeningDate: tfdate.ObjectFromRange(&familio.DateRange{Year: 1881}),
 	}
 	events, diags := eventsFromModel(context.Background(), m)
 	if diags.HasError() {
@@ -140,13 +140,13 @@ func TestApplyEventsToStateUsesOwnBirthEvent(t *testing.T) {
 	// they are role "child"). A naive first-birth-event pick would read the
 	// child's date (1910) or nil; the person's own birth year is 1889.
 	events := []familio.Event{
-		familio.BirthEvent(&familio.DatePart{Year: 1910}, "uuid-child", []string{personUUID}),
-		familio.BirthEvent(&familio.DatePart{Year: 1889}, personUUID, []string{"uuid-dad", "uuid-mom"}),
+		familio.BirthEvent(&familio.DateRange{Year: 1910}, "uuid-child", []string{personUUID}),
+		familio.BirthEvent(&familio.DateRange{Year: 1889}, personUUID, []string{"uuid-dad", "uuid-mom"}),
 	}
 	m := &ResourceModel{UUID: types.StringValue(personUUID)}
 	applyEventsToState(events, m)
 
-	part, diags := tfdate.PartFromObject(context.Background(), m.BirthDate)
+	part, diags := tfdate.RangeFromObject(context.Background(), m.BirthDate)
 	if diags.HasError() {
 		t.Fatalf("unexpected diags: %v", diags)
 	}
@@ -191,18 +191,18 @@ func TestApplyParentsToState(t *testing.T) {
 
 func TestDateObjectRoundTrip(t *testing.T) {
 	month := 6
-	obj := tfdate.Object(&familio.DatePart{Year: 1850, Month: &month})
+	obj := tfdate.ObjectFromRange(&familio.DateRange{Year: 1850, Month: &month})
 	if obj.IsNull() {
 		t.Fatal("object should not be null")
 	}
-	back, diags := tfdate.PartFromObject(context.Background(), obj)
+	back, diags := tfdate.RangeFromObject(context.Background(), obj)
 	if diags.HasError() {
 		t.Fatalf("unexpected diags: %v", diags)
 	}
 	if back.Year != 1850 || back.Month == nil || *back.Month != 6 || back.Day != nil {
 		t.Errorf("round-trip mismatch: %+v", back)
 	}
-	if !tfdate.Object(nil).IsNull() {
-		t.Error("nil DatePart should produce a null object")
+	if !tfdate.ObjectFromRange(nil).IsNull() {
+		t.Error("nil DateRange should produce a null object")
 	}
 }

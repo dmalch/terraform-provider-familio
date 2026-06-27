@@ -74,6 +74,44 @@ resource "familio_person" "test" {
 	})
 }
 
+// TestAccPerson_approximateDates exercises the #5 date model: an approximate
+// (circa → "about") birth, a julian-calendar christening, and a "before" death
+// bound. The second step asserts an empty re-plan, proving the dates read back
+// without a perpetual diff (RangeFromEventDate round-trips against the live API).
+func TestAccPerson_approximateDates(t *testing.T) {
+	const config = `
+resource "familio_person" "approx" {
+  first_name       = "АкцТест"
+  last_name        = "Примернов"
+  gender           = "male"
+  privacy          = "invisible"
+  birth_date       = { year = 1846, circa = true }
+  christening_date = { year = 1846, calendar = "julian" }
+  death_date       = { year = 1901, range = "before" }
+}`
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
+		CheckDestroy:             checkPersonsDestroyed(t),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("familio_person.approx", tfjsonpath.New("birth_date").AtMapKey("circa"), knownvalue.Bool(true)),
+					statecheck.ExpectKnownValue("familio_person.approx", tfjsonpath.New("christening_date").AtMapKey("calendar"), knownvalue.StringExact("julian")),
+					statecheck.ExpectKnownValue("familio_person.approx", tfjsonpath.New("death_date").AtMapKey("range"), knownvalue.StringExact("before")),
+				},
+			},
+			{
+				Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
 // TestAccPerson_parents covers parentage (a child with two parents) and verifies
 // that changing a parent and editing the birth date both apply IN PLACE — i.e.
 // the child is updated, not replaced (which would lose its uuid and edges).

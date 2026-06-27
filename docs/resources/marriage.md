@@ -51,8 +51,15 @@ Required:
 
 Optional:
 
+- `calendar` (String) Calendar: gregorian (default) | julian.
+- `circa` (Boolean) Approximate ("circa") date — familio's "about" type. Cannot be combined with range.
 - `day` (Number) Day of month, 1-31.
+- `end_circa` (Boolean) Accepted for cross-provider config symmetry, but familio has no per-endpoint approximation, so it cannot be combined with range.
+- `end_day` (Number) Second endpoint day, 1-31 (only with range = "between").
+- `end_month` (Number) Second endpoint month, 1-12 (only with range = "between").
+- `end_year` (Number) Second endpoint year (only with range = "between").
 - `month` (Number) Month, 1-12.
+- `range` (String) Open bound or range: before | after | between. Omit for a single date. "between" needs end_year (the second endpoint).
 
 ## Import
 
