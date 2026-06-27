@@ -80,6 +80,16 @@ type Event struct {
 	Participants []Participant `json:"participants"`
 	Settlement   *string       `json:"settlement"`
 	Comment      string        `json:"comment"`
+	CreatedAt    string        `json:"createdAt,omitempty"`
+	UpdatedAt    string        `json:"updatedAt,omitempty"`
+}
+
+// ID returns the event's uuid (empty when unset, e.g. a request-side event).
+func (e *Event) ID() string {
+	if e.UUID == nil {
+		return ""
+	}
+	return *e.UUID
 }
 
 // BasicRecord is the basic person view. GET /persons/<uuid>/basic returns it

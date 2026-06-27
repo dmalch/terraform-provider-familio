@@ -3,12 +3,11 @@ package person
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	"github.com/dmalch/terraform-provider-familio/internal/familio"
+	"github.com/dmalch/terraform-provider-familio/internal/tfdate"
 )
 
 // basicFromModel builds the basic person fields from the plan, defaulting an
@@ -34,40 +33,16 @@ func basicFromModel(m *ResourceModel) familio.BasicFields {
 func eventsFromModel(ctx context.Context, m *ResourceModel) ([]familio.Event, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	birth, d := datePartFromObject(ctx, m.BirthDate)
+	birth, d := tfdate.PartFromObject(ctx, m.BirthDate)
 	diags.Append(d...)
 	events := []familio.Event{familio.SelfBirthEvent(birth)}
 
 	if !m.DeathDate.IsNull() && !m.DeathDate.IsUnknown() {
-		death, dd := datePartFromObject(ctx, m.DeathDate)
+		death, dd := tfdate.PartFromObject(ctx, m.DeathDate)
 		diags.Append(dd...)
 		events = append(events, familio.SelfDeathEvent(death))
 	}
 	return events, diags
-}
-
-// datePartFromObject converts a nested {year,month,day} object into a DatePart
-// (nil when the object is null/unknown).
-func datePartFromObject(ctx context.Context, obj types.Object) (*familio.DatePart, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	if obj.IsNull() || obj.IsUnknown() {
-		return nil, diags
-	}
-	var dm dateModel
-	diags.Append(obj.As(ctx, &dm, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	part := &familio.DatePart{Year: int(dm.Year.ValueInt64())}
-	if !dm.Month.IsNull() && !dm.Month.IsUnknown() {
-		mm := int(dm.Month.ValueInt64())
-		part.Month = &mm
-	}
-	if !dm.Day.IsNull() && !dm.Day.IsUnknown() {
-		dd := int(dm.Day.ValueInt64())
-		part.Day = &dd
-	}
-	return part, diags
 }
 
 // applyBasicToState copies the server's basic record (names/gender/privacy +
@@ -87,8 +62,8 @@ func applyBasicToState(rec *familio.BasicRecord, m *ResourceModel) {
 
 // applyEventsToState sets birth_date/death_date from a read-back events slice.
 func applyEventsToState(events []familio.Event, m *ResourceModel) {
-	m.BirthDate = dateObject(eventDatePart(events, familio.EventBirth))
-	m.DeathDate = dateObject(eventDatePart(events, familio.EventDeath))
+	m.BirthDate = tfdate.Object(eventDatePart(events, familio.EventBirth))
+	m.DeathDate = tfdate.Object(eventDatePart(events, familio.EventDeath))
 }
 
 // eventDatePart returns the date of the first event of the given type, or nil.
@@ -99,24 +74,4 @@ func eventDatePart(events []familio.Event, typ string) *familio.DatePart {
 		}
 	}
 	return nil
-}
-
-// dateObject builds a nested date object from a DatePart (null when nil).
-func dateObject(part *familio.DatePart) types.Object {
-	if part == nil {
-		return types.ObjectNull(dateAttrTypes)
-	}
-	obj, _ := types.ObjectValue(dateAttrTypes, map[string]attr.Value{
-		"year":  types.Int64Value(int64(part.Year)),
-		"month": int64PtrValue(part.Month),
-		"day":   int64PtrValue(part.Day),
-	})
-	return obj
-}
-
-func int64PtrValue(p *int) types.Int64 {
-	if p == nil {
-		return types.Int64Null()
-	}
-	return types.Int64Value(int64(*p))
 }

@@ -3,42 +3,44 @@ package union
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/dmalch/terraform-provider-familio/internal/tfdate"
 )
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "A union (marriage/partnership) linking persons in a familio.org family tree. " +
-			"NOTE: not yet creatable — the Familio write API is still being reverse-engineered.",
+		Description: "A union (marriage/partnership) linking two persons in a familio.org family " +
+			"tree. Modelled as a wedding event between the partners. Changing the partners or the " +
+			"marriage date forces replacement (event editing is not yet supported).",
 		Attributes: map[string]schema.Attribute{
 			"uuid": schema.StringAttribute{
-				Description:   "The familio.org union UUID.",
+				Description:   "The underlying wedding-event UUID.",
 				Computed:      true,
-				Optional:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"partners": schema.SetAttribute{
-				Description: "UUIDs of the partner persons in the union.",
-				Optional:    true,
+				Description: "UUIDs of the two partner persons. Both must already exist.",
+				Required:    true,
 				ElementType: types.StringType,
+				Validators: []validator.Set{
+					setvalidator.SizeBetween(2, 2),
+				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.RequiresReplace(),
+				},
 			},
-			"children": schema.SetAttribute{
-				Description: "UUIDs of the children of the union.",
-				Optional:    true,
-				ElementType: types.StringType,
-			},
-			"marriage_date": schema.StringAttribute{
-				Description: "Marriage date.",
-				Optional:    true,
-			},
-			"divorce_date": schema.StringAttribute{
-				Description: "Divorce date.",
-				Optional:    true,
-			},
+			"marriage_date": tfdate.Block("Marriage date."),
+
+			"created_at": schema.StringAttribute{Computed: true, Description: "Creation timestamp."},
+			"updated_at": schema.StringAttribute{Computed: true, Description: "Last update timestamp."},
 		},
 	}
 }

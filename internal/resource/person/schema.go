@@ -3,16 +3,15 @@ package person
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
 	"github.com/dmalch/terraform-provider-familio/internal/familio"
+	"github.com/dmalch/terraform-provider-familio/internal/tfdate"
 )
 
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -66,42 +65,13 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					stringvalidator.OneOf(familio.PrivacyVisibleForAll, familio.PrivacyInvisible),
 				},
 			},
-			"birth_date": dateBlock("Birth date."),
-			"death_date": dateBlock("Death date. Setting it records a death event."),
+			"birth_date": tfdate.Block("Birth date."),
+			"death_date": tfdate.Block("Death date. Setting it records a death event."),
 
 			// Computed, populated from familio.
 			"display_name": schema.StringAttribute{Computed: true, Description: "Server-computed full display name."},
 			"created_at":   schema.StringAttribute{Computed: true, Description: "Creation timestamp."},
 			"updated_at":   schema.StringAttribute{Computed: true, Description: "Last update timestamp."},
-		},
-	}
-}
-
-// dateBlock builds a nested {year, month, day} date attribute. Changing a date
-// forces replacement: editing existing events is not yet implemented, so the
-// only way to change a birth/death date today is to recreate the person.
-func dateBlock(desc string) schema.SingleNestedAttribute {
-	return schema.SingleNestedAttribute{
-		Description: desc + " Changing it forces a new resource (event editing is not yet supported).",
-		Optional:    true,
-		PlanModifiers: []planmodifier.Object{
-			objectplanmodifier.RequiresReplace(),
-		},
-		Attributes: map[string]schema.Attribute{
-			"year": schema.Int64Attribute{
-				Description: "Year (e.g. 1900).",
-				Required:    true,
-			},
-			"month": schema.Int64Attribute{
-				Description: "Month, 1-12.",
-				Optional:    true,
-				Validators:  []validator.Int64{int64validator.Between(1, 12)},
-			},
-			"day": schema.Int64Attribute{
-				Description: "Day of month, 1-31.",
-				Optional:    true,
-				Validators:  []validator.Int64{int64validator.Between(1, 31)},
-			},
 		},
 	}
 }

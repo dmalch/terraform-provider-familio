@@ -2,12 +2,13 @@ package union
 
 import (
 	"context"
+	"errors"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/dmalch/terraform-provider-familio/internal/familio"
+	"github.com/dmalch/terraform-provider-familio/internal/tfdate"
 )
 
 func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -17,51 +18,92 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	input, diags := inputFromModel(ctx, &plan)
+	partners, diags := partnerList(ctx, plan.Partners)
 	resp.Diagnostics.Append(diags...)
+	date, dd := tfdate.PartFromObject(ctx, plan.MarriageDate)
+	resp.Diagnostics.Append(dd...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	if len(partners) != 2 {
+		resp.Diagnostics.AddError("Invalid familio_union", "partners must contain exactly two person UUIDs")
+		return
+	}
 
-	created, err := r.client.CreateUnion(ctx, input)
+	event := familio.WeddingEvent(date, partners[0], partners[1])
+	created, err := r.client.CreateEvent(ctx, partners[0], event)
 	if err != nil {
 		resp.Diagnostics.AddError("Cannot create familio_union", err.Error())
 		return
 	}
 
-	plan.UUID = types.StringValue(created.UUID)
+	plan.UUID = types.StringValue(created.ID())
+	plan.CreatedAt = types.StringValue(created.CreatedAt)
+	plan.UpdatedAt = types.StringValue(created.UpdatedAt)
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
 func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	// No union read endpoint is known yet; pass state through unchanged. Once a
-	// union enters state (after write support lands), this fetches and reconciles.
 	var state ResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
-}
 
-func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan ResourceModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	input, diags := inputFromModel(ctx, &plan)
+	partners, diags := partnerList(ctx, state.Partners)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	if len(partners) == 0 {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	anchor := partners[0]
 
-	if _, err := r.client.UpdateUnion(ctx, plan.UUID.ValueString(), input); err != nil {
-		resp.Diagnostics.AddError("Cannot update familio_union", err.Error())
+	events, err := r.client.GetPersonEvents(ctx, anchor)
+	if err != nil {
+		if errors.Is(err, familio.ErrNotFound) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		resp.Diagnostics.AddError("Error reading familio_union", err.Error())
 		return
 	}
 
+	event := findWedding(events, state.UUID.ValueString())
+	if event == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	spouses := event.SpouseUUIDs()
+	partnerSet, d := types.SetValueFrom(ctx, types.StringType, spouses)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	state.Partners = partnerSet
+	state.MarriageDate = tfdate.Object(event.Date.First)
+	state.CreatedAt = types.StringValue(event.CreatedAt)
+	state.UpdatedAt = types.StringValue(event.UpdatedAt)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+}
+
+// Update only ever runs for in-place-updatable attributes. partners and
+// marriage_date both force replacement, so nothing here calls the API; it just
+// carries the computed values forward.
+func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state ResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	plan.UUID = state.UUID
+	plan.CreatedAt = state.CreatedAt
+	plan.UpdatedAt = state.UpdatedAt
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
@@ -72,26 +114,20 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 		return
 	}
 
-	if err := r.client.DeleteUnion(ctx, state.UUID.ValueString()); err != nil {
-		resp.Diagnostics.AddError("Cannot delete familio_union", err.Error())
+	partners, diags := partnerList(ctx, state.Partners)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if len(partners) == 0 {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
+	err := r.client.DeleteEvent(ctx, partners[0], state.UUID.ValueString())
+	if err != nil && !errors.Is(err, familio.ErrNotFound) {
+		resp.Diagnostics.AddError("Cannot delete familio_union", err.Error())
+		return
+	}
 	resp.State.RemoveResource(ctx)
-}
-
-func inputFromModel(ctx context.Context, m *ResourceModel) (familio.UnionInput, diag.Diagnostics) {
-	var input familio.UnionInput
-	var diags diag.Diagnostics
-
-	if !m.Partners.IsNull() && !m.Partners.IsUnknown() {
-		diags = append(diags, m.Partners.ElementsAs(ctx, &input.PartnerUUIDs, false)...)
-	}
-	if !m.Children.IsNull() && !m.Children.IsUnknown() {
-		diags = append(diags, m.Children.ElementsAs(ctx, &input.ChildUUIDs, false)...)
-	}
-	input.MarriageDate = m.MarriageDate.ValueString()
-	input.DivorceDate = m.DivorceDate.ValueString()
-
-	return input, diags
 }

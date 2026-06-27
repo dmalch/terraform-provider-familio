@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/dmalch/terraform-provider-familio/internal/familio"
+	"github.com/dmalch/terraform-provider-familio/internal/tfdate"
 )
 
 func TestBasicFromModelDefaultsPrivacy(t *testing.T) {
@@ -28,8 +29,8 @@ func TestBasicFromModelDefaultsPrivacy(t *testing.T) {
 func TestEventsFromModelBirthOnly(t *testing.T) {
 	m := &ResourceModel{
 		Gender:    types.StringValue(familio.GenderFemale),
-		BirthDate: types.ObjectNull(dateAttrTypes),
-		DeathDate: types.ObjectNull(dateAttrTypes),
+		BirthDate: types.ObjectNull(tfdate.AttrTypes),
+		DeathDate: types.ObjectNull(tfdate.AttrTypes),
 	}
 	events, diags := eventsFromModel(context.Background(), m)
 	if diags.HasError() {
@@ -48,8 +49,8 @@ func TestEventsFromModelWithDates(t *testing.T) {
 	day := 15
 	m := &ResourceModel{
 		Gender:    types.StringValue(familio.GenderMale),
-		BirthDate: dateObject(&familio.DatePart{Year: 1900, Month: &month, Day: &day}),
-		DeathDate: dateObject(&familio.DatePart{Year: 1971}),
+		BirthDate: tfdate.Object(&familio.DatePart{Year: 1900, Month: &month, Day: &day}),
+		DeathDate: tfdate.Object(&familio.DatePart{Year: 1971}),
 	}
 	events, diags := eventsFromModel(context.Background(), m)
 	if diags.HasError() {
@@ -70,18 +71,18 @@ func TestEventsFromModelWithDates(t *testing.T) {
 
 func TestDateObjectRoundTrip(t *testing.T) {
 	month := 6
-	obj := dateObject(&familio.DatePart{Year: 1850, Month: &month})
+	obj := tfdate.Object(&familio.DatePart{Year: 1850, Month: &month})
 	if obj.IsNull() {
 		t.Fatal("object should not be null")
 	}
-	back, diags := datePartFromObject(context.Background(), obj)
+	back, diags := tfdate.PartFromObject(context.Background(), obj)
 	if diags.HasError() {
 		t.Fatalf("unexpected diags: %v", diags)
 	}
 	if back.Year != 1850 || back.Month == nil || *back.Month != 6 || back.Day != nil {
 		t.Errorf("round-trip mismatch: %+v", back)
 	}
-	if !dateObject(nil).IsNull() {
+	if !tfdate.Object(nil).IsNull() {
 		t.Error("nil DatePart should produce a null object")
 	}
 }

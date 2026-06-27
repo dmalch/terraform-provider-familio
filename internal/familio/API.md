@@ -140,15 +140,30 @@ person) → almost certainly `POST/PUT /api/v2/persons/<uuid>/events` with the e
 `formatted` is server-computed (`"Неизвестно"` when empty). Validate via
 `PUT /api/v2/validate/complex-date` (204 = ok). Surnames: `POST /api/v2/surnames/validate` `{surname}` (204).
 
+### Events sub-resource (CONFIRMED, replayed) ⭐
+Standalone life events — including linking two **existing** persons:
+- **Create** `POST /api/v2/persons/<personUuid>/events` with a single Event body
+  (`{uuid:null, type, date, participants:[…], settlement:null, comment:""}`) → **201**, returns the
+  event with its new `uuid` (+ `createdAt`/`updatedAt`). For a marriage: `type:"wedding"`,
+  `participants:[{personUuid:A,role:"spouse"},{personUuid:B,role:"spouse"}]`. The date may be set on
+  create (e.g. `first:{day,month,year,type:"gregorian"}` → echoes `formatted:"12.05.1875"`). The event
+  shows up on **every participant's** `/events`, so anchor read/delete on any participant.
+- **Delete** `DELETE /api/v2/persons/<personUuid>/events/<eventUuid>` → **204**.
+- **Update** `PUT /api/v2/persons/<personUuid>/events/<eventUuid>` → **400** «Не указана дата
+  последнего обновления информации» — same optimistic-lock gate as person basic, but the `timestamp`
+  field that works for `/basic` does **not** satisfy it here (the key is still unknown). ⇒ the union
+  resource makes date/partners **RequiresReplace** instead of in-place updating.
+
+`POST /api/v2/events` (no person prefix) → **404**; events are strictly a person sub-resource.
+
 ## Remaining gaps (minor)
 
-1. **Link two already-existing persons** (marriage/parent-child without creating a new person) — the
-   confirmed flows all create a new related person in one POST. The existing-person link is almost
-   certainly `POST/PUT /api/v2/persons/<uuid>/events` with a `wedding`/`birth` event; one short
-   capture/probe to confirm.
-2. **Event update/delete** (edit a date/place, dissolve a marriage) — `…/events/<eventUuid>` shape.
-3. **Token refresh** — JWT lasts ~30 days; provider should re-scrape `__NEXT_DATA__.token` from a
-   page fetch when expired.
+1. **Event in-place update** (edit a marriage/birth date without recreating) — the `PUT
+   …/events/<id>` concurrency-token field name (the `timestamp` that works for `/basic` is rejected).
+2. **Settlement on events** (place of marriage/birth) — `settlement` accepts null; setting a real
+   settlement uuid is untested, so not yet exposed.
+3. **Parent↔child links** between existing persons (add a parent/child to a person's birth event).
+4. **Token refresh** — JWT lasts ~30 days; the provider re-scrapes `__NEXT_DATA__.token` near expiry.
 
 ## Capture recipe (browser)
 

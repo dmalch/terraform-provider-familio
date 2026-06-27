@@ -1,7 +1,9 @@
-// Package union implements the familio_union resource (marriages/partnerships
-// linking persons). Write support is pending the Familio tree-editor API
-// discovery spike (see internal/familio/API.md); for now Create returns an
-// explicit "not implemented" diagnostic, so a union never enters state.
+// Package union implements the familio_union resource: a marriage/partnership
+// between two persons, which familio models as a "wedding" event with two
+// spouse participants (see internal/familio/API.md). Create posts the event,
+// Read finds it on a partner's event list, Delete removes it. Changing the
+// partners or marriage date forces replacement, since event editing is not yet
+// implemented.
 package union
 
 import (
