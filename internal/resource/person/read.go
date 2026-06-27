@@ -37,13 +37,16 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		state.DisplayName = types.StringValue(display.DisplayName)
 	}
 
-	// Birth/death dates and parents come from the events sub-resource.
-	if events, err := r.client.GetPersonEvents(ctx, uuid); err != nil {
-		resp.Diagnostics.AddWarning("Could not read familio_person events", err.Error())
-	} else {
-		applyEventsToState(events, &state)
-		resp.Diagnostics.Append(applyParentsToState(ctx, events, &state)...)
+	// Birth/death dates and parents come from the events sub-resource. This is
+	// managed data, so a failed read must be a hard error: silently leaving these
+	// null would let the next apply overwrite real familio values with no diff (#4).
+	events, err := r.client.GetPersonEvents(ctx, uuid)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading familio_person events", err.Error())
+		return
 	}
+	applyEventsToState(events, &state)
+	resp.Diagnostics.Append(applyParentsToState(ctx, events, &state)...)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }

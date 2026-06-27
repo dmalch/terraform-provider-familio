@@ -1,3 +1,18 @@
+## 0.4.2
+
+BUG FIXES:
+
+* **Fixed `terraform import familio_person` silently overwriting an existing person's
+  birth date.** When a person is also a parent, familio returns their children's birth events
+  on the same `/events` list (where the person holds the `parent` role), so the read picked
+  the wrong (or an empty) birth event and imported `birth_date` as `null` — the next `apply`
+  then re-asserted the config value with no diff, clobbering the real date (e.g. a known
+  b.1889 became b.1890). The birth date is now read from the person's *own* birth event (the
+  one where they are the `child`), matching how `parents` is already read.
+* **A failed read of a person's events is now a hard error instead of a silent warning**, so
+  managed dates and parents can no longer drift to `null` when the events sub-resource is
+  unreachable.
+
 ## 0.4.1
 
 ENHANCEMENTS:

@@ -82,7 +82,7 @@ func applyBasicToState(rec *familio.BasicRecord, m *ResourceModel) {
 // applyEventsToState sets birth_date/death_date/christening_date from a read-back
 // events slice.
 func applyEventsToState(events []familio.Event, m *ResourceModel) {
-	m.BirthDate = tfdate.Object(eventDatePart(events, familio.EventBirth))
+	m.BirthDate = tfdate.Object(ownBirthDatePart(events, m.UUID.ValueString()))
 	m.DeathDate = tfdate.Object(eventDatePart(events, familio.EventDeath))
 	m.ChristeningDate = tfdate.Object(eventDatePart(events, familio.EventBaptism))
 }
@@ -106,6 +106,19 @@ func applyParentsToState(ctx context.Context, events []familio.Event, m *Resourc
 	diags.Append(d...)
 	m.Parents = set
 	return diags
+}
+
+// ownBirthDatePart returns the date of the person's OWN birth event — the one
+// where they are the child. A person who is also a parent has their children's
+// birth events on the same /events list (where they hold role parent), so a
+// plain type filter (eventDatePart) could return a child's birth date instead.
+// Mirrors applyParentsToState, which reads parents from this same event.
+func ownBirthDatePart(events []familio.Event, personUUID string) *familio.DatePart {
+	birth := familio.OwnBirthEvent(events, personUUID)
+	if birth == nil {
+		return nil
+	}
+	return birth.Date.First
 }
 
 // eventDatePart returns the date of the first event of the given type, or nil.

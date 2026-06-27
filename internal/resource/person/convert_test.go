@@ -133,6 +133,31 @@ func TestEventsFromModelWithParents(t *testing.T) {
 	}
 }
 
+func TestApplyEventsToStateUsesOwnBirthEvent(t *testing.T) {
+	const personUUID = "uuid-person"
+	// A person who is ALSO a parent: their /events lists their child's birth
+	// event (where they are role "parent") BEFORE their own birth event (where
+	// they are role "child"). A naive first-birth-event pick would read the
+	// child's date (1910) or nil; the person's own birth year is 1889.
+	events := []familio.Event{
+		familio.BirthEvent(&familio.DatePart{Year: 1910}, "uuid-child", []string{personUUID}),
+		familio.BirthEvent(&familio.DatePart{Year: 1889}, personUUID, []string{"uuid-dad", "uuid-mom"}),
+	}
+	m := &ResourceModel{UUID: types.StringValue(personUUID)}
+	applyEventsToState(events, m)
+
+	part, diags := tfdate.PartFromObject(context.Background(), m.BirthDate)
+	if diags.HasError() {
+		t.Fatalf("unexpected diags: %v", diags)
+	}
+	if part == nil {
+		t.Fatal("birth_date read back as null; want the person's own birth year 1889")
+	}
+	if part.Year != 1889 {
+		t.Errorf("birth_date year = %d, want 1889 (own birth event, not the child's)", part.Year)
+	}
+}
+
 func TestApplyParentsToState(t *testing.T) {
 	const childUUID = "uuid-child"
 	events := []familio.Event{
