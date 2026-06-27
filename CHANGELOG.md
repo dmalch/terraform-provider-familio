@@ -1,3 +1,15 @@
+## 0.6.0
+
+FEATURES:
+
+* **New data source `familio_person`** — look up a single person by UUID. It surfaces the
+  owning account (`owner_id`, which is absent from the settlement list and previously needed a
+  raw API call) plus names, gender, privacy, the formatted birth/death/christening dates, and
+  the person's relationships as UUID sets: `parents`, `spouses` and `children`. This makes
+  importable tree nodes discoverable declaratively — e.g. walk a person's `parents` to adopt
+  ancestors that aren't tagged to a settlement — and lets configs tell your own tree from other
+  researchers' profiles or catalog rows by filtering on `owner_id`.
+
 ## 0.5.0
 
 FEATURES:

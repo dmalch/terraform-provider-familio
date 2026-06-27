@@ -3,6 +3,7 @@ package familio
 import (
 	"context"
 	"net/http"
+	"slices"
 )
 
 // WeddingEvent builds a marriage event linking two existing persons as spouses.
@@ -106,6 +107,55 @@ func (e *Event) ParentUUIDs() []string {
 	for _, p := range e.Participants {
 		if p.Role == RoleParent {
 			out = append(out, p.PersonUUID)
+		}
+	}
+	return out
+}
+
+// ChildrenOf returns the uuids of personUUID's children: the child participant
+// of every birth event in which personUUID is a parent. It is the inverse of
+// OwnBirthEvent (which finds the event where personUUID is the child), so a
+// person's own birth never counts as a child.
+func ChildrenOf(events []Event, personUUID string) []string {
+	var out []string
+	for i := range events {
+		if events[i].Type != EventBirth {
+			continue
+		}
+		isParent := false
+		var child string
+		for _, p := range events[i].Participants {
+			switch {
+			case p.Role == RoleParent && p.PersonUUID == personUUID:
+				isParent = true
+			case p.Role == RoleChild:
+				child = p.PersonUUID
+			}
+		}
+		if isParent && child != "" {
+			out = append(out, child)
+		}
+	}
+	return out
+}
+
+// SpousesOf returns the uuids of personUUID's spouses across the wedding events
+// they take part in (every spouse participant other than the person). Weddings
+// that do not include the person are ignored.
+func SpousesOf(events []Event, personUUID string) []string {
+	var out []string
+	for i := range events {
+		if events[i].Type != EventWedding {
+			continue
+		}
+		spouses := events[i].SpouseUUIDs()
+		if !slices.Contains(spouses, personUUID) {
+			continue
+		}
+		for _, uuid := range spouses {
+			if uuid != personUUID {
+				out = append(out, uuid)
+			}
 		}
 	}
 	return out

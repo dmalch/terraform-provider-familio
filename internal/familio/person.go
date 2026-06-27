@@ -255,6 +255,31 @@ func (c *Client) GetPersonDisplay(ctx context.Context, uuid string) (*personDisp
 	return &d, nil
 }
 
+// RegularRecord is the slice of the regularPerson view (GET /persons/<uuid>) the
+// provider surfaces beyond the basic record: notably ownerId, the account that
+// owns the profile, which is not present on the public settlement list.
+type RegularRecord struct {
+	UUID        string `json:"uuid"`
+	DisplayName string `json:"displayName"`
+	OwnerID     string `json:"ownerId"`
+	Gender      string `json:"gender"`
+	PrivacyType string `json:"privacyType"`
+}
+
+// GetPersonRegular reads the regularPerson view, including the owning account
+// (ownerId) used to tell one's own tree from other researchers' profiles.
+func (c *Client) GetPersonRegular(ctx context.Context, uuid string) (*RegularRecord, error) {
+	req, err := c.newAuthedRequest(ctx, http.MethodGet, "persons/"+uuid, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	var rec RegularRecord
+	if err := c.do(req, &rec); err != nil {
+		return nil, err
+	}
+	return &rec, nil
+}
+
 // UpdatePersonBasic edits a person's basic fields. version is the optimistic-
 // lock token (the updatedAt last read from GetPersonBasic), sent in the
 // X-Base-Version header that familio's editor uses; a stale value is rejected
