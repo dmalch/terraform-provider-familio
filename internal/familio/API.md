@@ -186,6 +186,18 @@ needed. **Two event "classes":**
   POST a new one** (DELETE → 204). `familio_person.christening_date` (a `baptism` event) is
   managed this way.
 
+**Participant roles** (the full vocabulary, from JS): `child`, `parent`, `sibling`, `spouse`,
+`owner`. Each event type restricts which roles are valid (e.g. `child`/`parent` only on `birth`,
+`spouse` on `wedding`/`divorce`/`affiance`/`nikah`).
+
+**Two-person relationship events `godparent` (Восприемник) and `warranter` (Поручитель)
+(CONFIRMED, replayed):** both participants use **`role:"owner"`** — `[{A,owner},{B,owner}]` → 201,
+the event appears on **both** persons' `/events`. **Direction is NOT encoded** (both are `owner`,
+symmetric — like marriage's two `spouse`s); who is godparent vs godchild is not stored. The anchor
+person must be in the participant list (a single-participant POST → 400 «должна быть указана
+персона …»). Repeatable; no upsert. `sibling` is a relationship role too (a `sibling` event), but
+`godparent`/`warranter` reject it — they are strictly two `owner`s.
+
 ## Remaining gaps (minor)
 
 1. **Wedding-event in-place edit** — the marriage resource still uses RequiresReplace for
