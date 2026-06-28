@@ -35,5 +35,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	resp.Diagnostics.Append(applyEventsToState(ctx, created.Events, &plan)...)
 	plan.DisplayName = types.StringValue(created.Basic.DisplayName)
 
+	// Sources are a separate sub-resource; attach them after the person exists.
+	if desired, managed, d := desiredSources(ctx, plan.Sources); managed {
+		resp.Diagnostics.Append(d...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resp.Diagnostics.Append(r.writeSources(ctx, created.Basic.UUID, desired)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		sources, d := r.readSources(ctx, created.Basic.UUID, plan.Sources)
+		resp.Diagnostics.Append(d...)
+		plan.Sources = sources
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }

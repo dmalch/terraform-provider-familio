@@ -83,4 +83,23 @@ resource "familio_person" "pyotr" {
       familio_person.maria.uuid,
     ]
   }
+
+  # Sources («Источники») can be managed inline as an authoritative set: the
+  # provider makes familio match this list exactly. Use this OR standalone
+  # familio_source resources for a given person, not both. Omit the block to
+  # leave a person's sources unmanaged; use `sources = []` to remove them all.
+  sources = [
+    # An archival document (дело) — type = "case".
+    {
+      reference_uuid = "58e68fa4-9e58-4f11-84bd-510a2dc015eb"
+      type           = "case"
+      comment        = "Ревизская сказка 1811 г."
+    },
+    # A people-index record — type = "catalog_person" with its catalog id.
+    {
+      reference_uuid = "0123e5fb-e298-46e7-8779-a9bfa793ca5a"
+      type           = "catalog_person"
+      catalog_key    = "gwarmil"
+    },
+  ]
 }

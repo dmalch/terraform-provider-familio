@@ -18,6 +18,7 @@ import (
 	"github.com/dmalch/terraform-provider-familio/internal/resource/event"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/marriage"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/person"
+	"github.com/dmalch/terraform-provider-familio/internal/resource/source"
 )
 
 const (
@@ -135,6 +136,7 @@ func (p *FamilioProvider) Resources(_ context.Context) []func() resource.Resourc
 		person.NewPersonResource,
 		marriage.NewMarriageResource,
 		event.NewEventResource,
+		source.NewSourceResource,
 	}
 }
 

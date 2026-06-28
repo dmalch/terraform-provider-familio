@@ -98,6 +98,25 @@ resource "familio_person" "pyotr" {
       familio_person.maria.uuid,
     ]
   }
+
+  # Sources («Источники») can be managed inline as an authoritative set: the
+  # provider makes familio match this list exactly. Use this OR standalone
+  # familio_source resources for a given person, not both. Omit the block to
+  # leave a person's sources unmanaged; use `sources = []` to remove them all.
+  sources = [
+    # An archival document (дело) — type = "case".
+    {
+      reference_uuid = "58e68fa4-9e58-4f11-84bd-510a2dc015eb"
+      type           = "case"
+      comment        = "Ревизская сказка 1811 г."
+    },
+    # A people-index record — type = "catalog_person" with its catalog id.
+    {
+      reference_uuid = "0123e5fb-e298-46e7-8779-a9bfa793ca5a"
+      type           = "catalog_person"
+      catalog_key    = "gwarmil"
+    },
+  ]
 }
 ```
 
@@ -119,6 +138,7 @@ resource "familio_person" "pyotr" {
 - `last_name` (String) Surname (фамилия). NOTE: familio normalises capitalisation server-side.
 - `patronymic` (String) Patronymic (отчество); familio's middleName.
 - `privacy` (String) Privacy. One of: visible_for_all, invisible. Defaults to visible_for_all.
+- `sources` (Attributes List) Source citations («Источники») for this person, managed as an authoritative set: the provider makes familio match this list exactly. Omit the block to leave the person's sources unmanaged; use `[]` to remove them all. Mutually exclusive with standalone familio_source resources for the same person. (see [below for nested schema](#nestedatt--sources))
 
 ### Read-Only
 
@@ -215,6 +235,30 @@ Optional:
 - `end_year` (Number) Second endpoint year (only with range = "between").
 - `month` (Number) Month, 1-12.
 - `range` (String) Open bound or range: before | after | between. Omit for a single date. "between" needs end_year (the second endpoint).
+
+
+
+<a id="nestedatt--sources"></a>
+### Nested Schema for `sources`
+
+Required:
+
+- `reference_uuid` (String) UUID of the cited entity (an archive case/дело for type `case`, or a catalog-person record for type `catalog_person`).
+- `type` (String) Source kind: `case` or `catalog_person`.
+
+Optional:
+
+- `catalog_key` (String) For `catalog_person`, the source-catalog id (e.g. `gwarmil`); omit for `case`. Write-only at the familio API.
+- `comment` (String) Free-text note on the citation. Edited in place.
+
+Read-Only:
+
+- `catalog` (String) Server-derived catalog descriptor.
+- `created_at` (String) Creation timestamp.
+- `name` (String) Server-derived source label.
+- `requisites` (String) Server-derived archive coordinates.
+- `updated_at` (String) Last update timestamp.
+- `years` (String) Server-derived year span.
 
 ## Import
 

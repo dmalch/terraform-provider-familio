@@ -75,6 +75,7 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"birth":       birthBlock(),
 			"death":       deathBlock(),
 			"christening": christeningBlock(),
+			"sources":     sourcesBlock(),
 
 			// Computed, populated from familio.
 			"display_name": schema.StringAttribute{Computed: true, Description: "Server-computed full display name."},

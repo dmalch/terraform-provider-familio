@@ -47,5 +47,13 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 	resp.Diagnostics.Append(applyEventsToState(ctx, events, &state)...)
 
+	// Refresh the sources block only when it is managed (non-null); an omitted
+	// block must stay null so the provider doesn't claim a person's sources.
+	if !state.Sources.IsNull() {
+		sources, d := r.readSources(ctx, uuid, state.Sources)
+		resp.Diagnostics.Append(d...)
+		state.Sources = sources
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
