@@ -63,3 +63,39 @@ func TestEventBuildersCarryPlace(t *testing.T) {
 	Expect(death.SettlementUUID()).To(Equal("s1"))
 	Expect(baptism.SettlementUUID()).To(Equal("s1"))
 }
+
+// TestSettlementDetailDecode decodes a real GET /api/v2/settlements/<uuid> body
+// (Нижняя Верея), confirming the requisites, classification and GeoJSON
+// coordinate map to the right fields (coordinates are [lon, lat]).
+func TestSettlementDetailDecode(t *testing.T) {
+	RegisterTestingT(t)
+	const body = `{"uuid":"40d1b180-b739-4ecb-9ee5-ced6fefcd0d8","primaryName":"Нижняя Верея",
+		"additionalNames":[],
+		"mainGeorequisite":{"level1":"Нижегородская область","level2":"город Выкса","year":2019},
+		"type":"село","status":"жилой",
+		"coordinate":{"type":"Point","coordinates":[41.976302,55.2479772]},
+		"nearestSettlements":[{"uuid":"227e549f","primaryName":"Верхняя Верея"}]}`
+	var s SettlementDetail
+	Expect(json.Unmarshal([]byte(body), &s)).To(Succeed())
+	Expect(s.PrimaryName).To(Equal("Нижняя Верея"))
+	Expect(s.AdditionalNames).To(BeEmpty())
+	Expect(s.MainGeorequisite.Level1).To(Equal("Нижегородская область"))
+	Expect(s.MainGeorequisite.Level2).To(Equal("город Выкса"))
+	Expect(s.MainGeorequisite.Year).To(Equal(2019))
+	Expect(s.Type).To(Equal("село"))
+	Expect(s.Status).To(Equal("жилой"))
+
+	lat, lon, ok := s.Coordinate.LatLon()
+	Expect(ok).To(BeTrue())
+	Expect(lat).To(BeNumerically("~", 55.2479772, 1e-6))
+	Expect(lon).To(BeNumerically("~", 41.976302, 1e-6))
+}
+
+func TestCoordinateLatLonNilSafe(t *testing.T) {
+	RegisterTestingT(t)
+	var c *Coordinate
+	_, _, ok := c.LatLon()
+	Expect(ok).To(BeFalse())
+	_, _, ok = (&Coordinate{Type: "Point", Coordinates: []float64{1}}).LatLon()
+	Expect(ok).To(BeFalse(), "a malformed (<2) coordinate is not usable")
+}
