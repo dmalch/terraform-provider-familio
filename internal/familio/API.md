@@ -265,9 +265,10 @@ How the resources use the surface above:
   the birth event where the person is the `child` (a parent's `/events` also lists their
   children's births). A place/comment is recorded even with an unknown date.
 - **`familio_marriage`** — an association resource over a partner pair; POSTs a `wedding` event
-  between two existing persons, with an optional `comment`. It cannot yet edit its event in
-  place, so changing partners/date/comment forces replacement (see [Known
-  limitations](#known-limitations--open-questions)).
+  between two existing persons, with an optional `comment`. The **date and comment edit in place**
+  (wedding events don't upsert, so — like the christening — the edit deletes the old event and
+  creates a fresh one, giving it a new uuid); changing **partners** forces replacement, since the
+  pair is the marriage's identity.
 - **`familio_event`** — the long tail of single-subject `owner` fact events (location,
   profession, education, military, awards, `godparent`/`warranter`, …).
 - **`familio_source`** — a person's source citation (the sources sub-resource above): the
@@ -285,11 +286,12 @@ How the resources use the surface above:
 
 ## Known limitations & open questions
 
-1. **Wedding-event in-place edit** — the POST-upsert trick is confirmed only for single-subject
-   `birth`/`death`. Whether re-POSTing a `wedding` upserts (vs. creating a duplicate) is
-   untested, so `familio_marriage` keeps RequiresReplace for partners/date.
+1. **Wedding events don't upsert** — re-POSTing a `wedding` duplicates it (the upsert trick is
+   confirmed only for single-subject `birth`/`death`). So `familio_marriage` edits its date/comment
+   in place by **delete-old + create-new** (the new event gets a new uuid), exactly like the
+   christening; `partners` stays RequiresReplace by design (a different pair is a different marriage).
 2. **`PUT …/events/<id>`** — blocked by an unknown concurrency-token field name; not needed
-   while the POST-upsert covers births/deaths.
+   while the POST-upsert covers births/deaths and delete+create covers weddings.
 3. **Token refresh** — the JWT lasts ~30 days; the client re-scrapes `__NEXT_DATA__.token` near
    expiry rather than via a mint endpoint (none exists).
 
