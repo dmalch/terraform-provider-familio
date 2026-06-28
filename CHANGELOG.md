@@ -1,3 +1,24 @@
+## 0.9.0
+
+FEATURES:
+
+* **New resource `familio_source`** — manage a person's source citations (the «Источники» tab).
+  A source references a catalogued entity (an archival document — `case`/дело — or a
+  `catalog_person` index record) via `reference_uuid` + `type` (+ `catalog_key` for
+  catalog-person records); the reference is immutable while `comment` edits in place.
+  `name`/`requisites`/`years`/`catalog` are read back from familio. Imported by
+  `"<person_uuid>:<reference_uuid>"`.
+* **`familio_person` gains a `sources` block** — the same citations managed inline as an
+  authoritative list (the provider makes familio match it exactly; `sources = []` removes all,
+  an omitted block leaves them unmanaged).
+
+NOTES:
+
+* A given person's sources should be managed through **one** surface — the inline
+  `familio_person.sources` block **or** standalone `familio_source` resources — not both (like
+  `aws_security_group` inline rules vs. `aws_security_group_rule`). `catalog_key` is write-only at
+  the familio API, so it is not recovered on import/refresh.
+
 ## 0.8.0
 
 BREAKING CHANGES:

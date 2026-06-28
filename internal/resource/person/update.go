@@ -71,6 +71,24 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 	}
 
+	// Sources are an authoritative set when the block is present. Reconcile only
+	// on change; a null plan block means "unmanaged" and leaves familio untouched.
+	if !plan.Sources.Equal(state.Sources) {
+		if desired, managed, d := desiredSources(ctx, plan.Sources); managed {
+			resp.Diagnostics.Append(d...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			resp.Diagnostics.Append(r.writeSources(ctx, uuid, desired)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			sources, d := r.readSources(ctx, uuid, plan.Sources)
+			resp.Diagnostics.Append(d...)
+			plan.Sources = sources
+		}
+	}
+
 	// Refresh server-computed fields (names normalisation, timestamps, display
 	// name) after the writes above. Dates/parents already reflect the plan.
 	if basic, err := r.client.GetPersonBasic(ctx, uuid); err != nil {

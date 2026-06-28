@@ -214,6 +214,44 @@ From the editor's `_app` chunk (key → Russian label): `birth` Рождение
 classes](#core-model--relationships--life-facts-are-events) above for upsert vs. duplicate
 behaviour.
 
+### Sources sub-resource (Bearer)
+
+A person's **«Источники»** (sources / record citations — the `?tab=3` panel) are a **separate
+sub-resource collection**, *not* events. A source is an immutable **reference** to a catalogued
+entity plus a mutable free-text comment. No `X-Base-Version` header is involved (unlike `/basic`).
+
+- **List** `GET /api/v2/persons/<personUuid>/sources` → **200**, a JSON array of source objects.
+- **Create** `POST /api/v2/persons/<personUuid>/sources` with the **write body**
+  `{ "uuid": "<entityUuid>", "type": "<case|catalog_person>", "catalogKey": <null|string> }`
+  → **200**, returns the full (enriched) source object. The write carries only those three
+  fields; `name`/`requisites`/`years`/`comment` are server-derived/defaulted.
+- **Edit (comment only)** `PATCH /api/v2/persons/<personUuid>/sources/<entityUuid>` with
+  `Content-Type: application/ld+json`, body `{ "comment": "…" }` → **200**, returns the updated
+  object. Only `comment` is mutable; the reference (`uuid`/`type`/`catalogKey`) is fixed —
+  changing it is a different source (delete + create).
+- **Delete** `DELETE /api/v2/persons/<personUuid>/sources/<entityUuid>` → **204**.
+
+The path id is the **referenced entity's uuid** (the source's identity within the person), so a
+person cannot cite the same entity twice. **Source object (read shape):**
+```jsonc
+{ "uuid": "58e68fa4-…",        // the referenced entity uuid (= path id); the source's identity
+  "type": "case",               // "case" = archive дело; "catalog_person" = a people-catalog record
+  "comment": "",                // user free text (PATCH-editable)
+  "name": "Ревизские сказки",   // server-derived label (read-only)
+  "requisites": "ГИА … ф. 145 оп. 1 д. 431",  // server-derived archive coordinates (read-only)
+  "years": "1811 - 1811",       // server-derived (read-only)
+  "catalog": null,              // server-derived (read-only)
+  "createdAt": "…", "updatedAt": "…" }
+```
+The two confirmed `type`s come from the two "add source" UI flows:
+- **`case`** — «Добавить архивный документ»: a digitised archive *case* (дело) chosen by drilling
+  the **organization → fund (Фонд) → register/опись → case (Дело)** catalog
+  (`/api/v2/{organizations,funds,registers,cases}`). `catalogKey` is **null**.
+- **`catalog_person`** — «Добавить запись из справочника»: a record from a people index, found via
+  `GET /api/v2/persons?type=catalogPerson&names=…&bindAllowed=true`. Here `catalogKey` names the
+  source catalog (e.g. `"gwarmil"` = the WWI «Памяти героев Великой войны» project), since a
+  catalog-person uuid is only unique within its catalog.
+
 ## Provider mapping
 
 How the resources use the surface above:
@@ -232,6 +270,13 @@ How the resources use the surface above:
   limitations](#known-limitations--open-questions)).
 - **`familio_event`** — the long tail of single-subject `owner` fact events (location,
   profession, education, military, awards, `godparent`/`warranter`, …).
+- **`familio_source`** — a person's source citation (the sources sub-resource above): the
+  reference (`reference_uuid` + `type` + optional `catalog_key`) is fixed (RequiresReplace), while
+  `comment` edits **in place** via PATCH; `name`/`requisites`/`years`/`catalog` are computed. The
+  same source set is also exposed as an authoritative **`sources` block on `familio_person`** —
+  the two surfaces are **mutually exclusive per person** (manage a person's sources via the inline
+  block *or* via standalone `familio_source` resources, never both; an omitted block leaves a
+  person's sources unmanaged).
 - **`familio_settlement_persons`** (data source) — the public settlement list above.
 - **`familio_person`** (data source) — reads `GET /persons/<uuid>` per uuid for `ownerId` (to
   tell one's own tree from other owners'/catalog rows) and derives relationships from
