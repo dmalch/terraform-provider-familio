@@ -92,9 +92,11 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
-// Update only ever runs for in-place-updatable attributes. partners and
-// marriage_date both force replacement, so nothing here calls the API; it just
-// carries the computed values forward.
+// Update edits the marriage date/comment in place. familio has no event PATCH
+// and wedding events do not upsert on re-POST, so — exactly like the person
+// resource's christening (reconcileChristening) — an edit deletes the old
+// wedding event and creates a fresh one (giving it a new uuid). partners force
+// replacement, so they are constant here and the anchor person is stable.
 func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan, state ResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -102,9 +104,45 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	plan.UUID = state.UUID
-	plan.CreatedAt = state.CreatedAt
-	plan.UpdatedAt = state.UpdatedAt
+
+	// Nothing event-defining changed (e.g. a computed-only refresh): carry the
+	// computed values forward without touching the API.
+	if plan.MarriageDate.Equal(state.MarriageDate) && plan.Comment.Equal(state.Comment) {
+		plan.UUID = state.UUID
+		plan.CreatedAt = state.CreatedAt
+		plan.UpdatedAt = state.UpdatedAt
+		resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
+		return
+	}
+
+	partners, diags := partnerList(ctx, plan.Partners)
+	resp.Diagnostics.Append(diags...)
+	date, dd := tfdate.RangeFromObject(ctx, plan.MarriageDate)
+	resp.Diagnostics.Append(dd...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if len(partners) != 2 {
+		resp.Diagnostics.AddError("Invalid familio_marriage", "partners must contain exactly two person UUIDs")
+		return
+	}
+	anchor := partners[0]
+
+	// Rebuild the wedding event: delete the old one, then create the new one.
+	if err := r.client.DeleteEvent(ctx, anchor, state.UUID.ValueString()); err != nil && !errors.Is(err, familio.ErrNotFound) {
+		resp.Diagnostics.AddError("Cannot update familio_marriage", err.Error())
+		return
+	}
+	event := familio.WeddingEvent(date, partners[0], partners[1], commentValue(plan.Comment))
+	created, err := r.client.CreateEvent(ctx, anchor, event)
+	if err != nil {
+		resp.Diagnostics.AddError("Cannot update familio_marriage", err.Error())
+		return
+	}
+
+	plan.UUID = types.StringValue(created.ID())
+	plan.CreatedAt = types.StringValue(created.CreatedAt)
+	plan.UpdatedAt = types.StringValue(created.UpdatedAt)
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 

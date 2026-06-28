@@ -3,12 +3,12 @@
 page_title: "familio_marriage Resource - familio"
 subcategory: ""
 description: |-
-  A marriage between two persons in a familio.org family tree, modelled as the wedding event that links the partners. Changing the partners or the marriage date forces replacement (event editing is not yet supported).
+  A marriage between two persons in a familio.org family tree, modelled as the wedding event that links the partners. The marriage date and comment edit in place; changing the partners forces replacement (the partner pair is the marriage's identity).
 ---
 
 # familio_marriage (Resource)
 
-A marriage between two persons in a familio.org family tree, modelled as the wedding event that links the partners. Changing the partners or the marriage date forces replacement (event editing is not yet supported).
+A marriage between two persons in a familio.org family tree, modelled as the wedding event that links the partners. The marriage date and comment edit in place; changing the partners forces replacement (the partner pair is the marriage's identity).
 
 ## Example Usage
 
@@ -36,14 +36,14 @@ resource "familio_marriage" "marriage" {
 
 ### Optional
 
-- `comment` (String) Free-text comment on the wedding event. Changing it forces replacement (event editing is not yet supported).
-- `marriage_date` (Attributes) Marriage date. Changing it forces a new resource (event editing is not yet supported). (see [below for nested schema](#nestedatt--marriage_date))
+- `comment` (String) Free-text comment on the wedding event. Edited in place.
+- `marriage_date` (Attributes) Marriage date. (see [below for nested schema](#nestedatt--marriage_date))
 
 ### Read-Only
 
 - `created_at` (String) Creation timestamp.
 - `updated_at` (String) Last update timestamp.
-- `uuid` (String) The underlying wedding-event UUID.
+- `uuid` (String) The underlying wedding-event UUID. familio has no event edit, so editing the date or comment recreates the wedding event — the UUID changes on such edits.
 
 <a id="nestedatt--marriage_date"></a>
 ### Nested Schema for `marriage_date`

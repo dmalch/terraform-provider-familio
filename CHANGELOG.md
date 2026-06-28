@@ -1,3 +1,16 @@
+## 0.10.0
+
+ENHANCEMENTS:
+
+* **`familio_marriage` now edits the marriage date and comment in place** instead of forcing a
+  destroy/recreate ([#15](https://github.com/dmalch/terraform-provider-familio/issues/15)).
+  Changing `marriage_date` or `comment` plans as a `~ update`, not a `-/+ replacement`. familio has
+  no event edit and wedding events don't upsert, so under the hood the provider rebuilds the wedding
+  event (delete + create) — exactly as it already does for a person's christening — which means the
+  computed `uuid` (and `created_at`/`updated_at`) is regenerated on such an edit and shows as
+  "known after apply". Changing `partners` still forces replacement: the partner pair is the
+  marriage's identity, so a different pair is a different marriage.
+
 ## 0.9.0
 
 FEATURES:

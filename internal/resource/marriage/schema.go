@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -18,13 +17,13 @@ import (
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "A marriage between two persons in a familio.org family tree, modelled as the " +
-			"wedding event that links the partners. Changing the partners or the marriage date forces " +
-			"replacement (event editing is not yet supported).",
+			"wedding event that links the partners. The marriage date and comment edit in place; " +
+			"changing the partners forces replacement (the partner pair is the marriage's identity).",
 		Attributes: map[string]schema.Attribute{
 			"uuid": schema.StringAttribute{
-				Description:   "The underlying wedding-event UUID.",
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Description: "The underlying wedding-event UUID. familio has no event edit, so editing " +
+					"the date or comment recreates the wedding event — the UUID changes on such edits.",
+				Computed: true,
 			},
 			"partners": schema.SetAttribute{
 				Description: "UUIDs of the two partner persons. Both must already exist.",
@@ -37,15 +36,11 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 					setplanmodifier.RequiresReplace(),
 				},
 			},
-			"marriage_date": tfdate.Block("Marriage date.", true),
+			"marriage_date": tfdate.Block("Marriage date.", false),
 
 			"comment": schema.StringAttribute{
-				Description: "Free-text comment on the wedding event. Changing it forces replacement " +
-					"(event editing is not yet supported).",
-				Optional: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
+				Description: "Free-text comment on the wedding event. Edited in place.",
+				Optional:    true,
 			},
 
 			"created_at": schema.StringAttribute{Computed: true, Description: "Creation timestamp."},
