@@ -25,7 +25,7 @@ resource "familio_person" "dad" {
   last_name  = "Источников"
   gender     = "male"
   privacy    = "invisible"
-  birth_date = { year = 1850 }
+  birth      = { date = { year = 1850 } }
 }
 
 resource "familio_person" "mom" {
@@ -40,7 +40,7 @@ resource "familio_person" "child" {
   last_name  = "Источников"
   gender     = "male"
   privacy    = "invisible"
-  parents    = [familio_person.dad.uuid, familio_person.mom.uuid]
+  birth      = { parents = [familio_person.dad.uuid, familio_person.mom.uuid] }
 }
 
 resource "familio_marriage" "m" {
