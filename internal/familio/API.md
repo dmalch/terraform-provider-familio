@@ -89,10 +89,12 @@ familio's «Место рождения / смерти». It is a **structured o
   additionalNames, mainGeorequisite, type, status, coordinate}` — same uuid.)
 - Settlement rides the **same birth/death POST-upsert** as the date, so it must be re-sent on
   every upsert (a full replace would otherwise clear it).
-- **Resolve / validate a uuid:** `GET /api/v2/settlements/<uuid>` → **200**
-  `{uuid, primaryName, additionalNames, mainGeorequisite, type, status, coordinate,
-  nearestSettlements[]}`. Not needed for writes (server enriches `{uuid}`). Only the plural path
-  works — `/settlement/<uuid>` and `/geo/settlements/<uuid>` → 404.
+- **Resolve / validate a uuid:** `GET /api/v2/settlements/<uuid>` (**Bearer**) → **200**
+  `{uuid, primaryName, additionalNames[], mainGeorequisite:{level1,level2,year}, type, status,
+  coordinate, nearestSettlements[]}`. `coordinate` is **GeoJSON** `{type:"Point",
+  coordinates:[lon,lat]}`. `type`/`status` are Russian labels (e.g. «село», «жилой»). Not needed for
+  writes (server enriches `{uuid}`); consumed by the `familio_settlement` data source. Only the
+  plural path works — `/settlement/<uuid>` and `/geo/settlements/<uuid>` → 404.
 
 ## Endpoint reference
 
@@ -279,6 +281,10 @@ How the resources use the surface above:
   block *or* via standalone `familio_source` resources, never both; an omitted block leaves a
   person's sources unmanaged).
 - **`familio_settlement_persons`** (data source) — the public settlement list above.
+- **`familio_settlement`** (data source) — looks up one settlement by uuid via
+  `GET /api/v2/settlements/<uuid>`, surfacing its name, requisites (region/district/year), type,
+  status and lat/lon (from the GeoJSON coordinate). Resolves/validates the settlement UUIDs the
+  place attributes and `familio_source` speak.
 - **`familio_person`** (data source) — reads `GET /persons/<uuid>` per uuid for `ownerId` (to
   tell one's own tree from other owners'/catalog rows) and derives relationships from
   `/events`: parents from the own birth event (`OwnBirthEvent`), spouses from wedding events

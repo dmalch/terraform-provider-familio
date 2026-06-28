@@ -1,3 +1,13 @@
+## 0.11.0
+
+FEATURES:
+
+* **New data source `familio_settlement`** — look up a settlement (place) by UUID and get its
+  canonical `name`, administrative requisites (`region`/`district`/`as_of_year`), `type`, `status`,
+  `additional_names` and `latitude`/`longitude`. Resolves and validates the settlement UUIDs that
+  `familio_person`'s birth/death/christening places and `familio_source` reference, and makes
+  configs self-documenting. Backed by `GET /api/v2/settlements/<uuid>`.
+
 ## 0.10.0
 
 ENHANCEMENTS:

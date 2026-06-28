@@ -13,7 +13,8 @@ import (
 
 	"github.com/dmalch/terraform-provider-familio/internal/config"
 	dsperson "github.com/dmalch/terraform-provider-familio/internal/datasource/person"
-	dssettlement "github.com/dmalch/terraform-provider-familio/internal/datasource/settlementpersons"
+	dssettlement "github.com/dmalch/terraform-provider-familio/internal/datasource/settlement"
+	dssettlementpersons "github.com/dmalch/terraform-provider-familio/internal/datasource/settlementpersons"
 	"github.com/dmalch/terraform-provider-familio/internal/familio"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/event"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/marriage"
@@ -142,7 +143,8 @@ func (p *FamilioProvider) Resources(_ context.Context) []func() resource.Resourc
 
 func (p *FamilioProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		dssettlement.NewDataSource,
+		dssettlementpersons.NewDataSource,
 		dsperson.NewDataSource,
+		dssettlement.NewDataSource,
 	}
 }
