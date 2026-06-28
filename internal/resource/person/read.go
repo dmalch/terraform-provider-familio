@@ -45,8 +45,7 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Error reading familio_person events", err.Error())
 		return
 	}
-	applyEventsToState(events, &state)
-	resp.Diagnostics.Append(applyParentsToState(ctx, events, &state)...)
+	resp.Diagnostics.Append(applyEventsToState(ctx, events, &state)...)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }

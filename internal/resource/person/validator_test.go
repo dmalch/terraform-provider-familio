@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	. "github.com/onsi/gomega"
 )
 
 // personConfig builds a tfsdk.Config from the resource schema with every
@@ -41,26 +42,23 @@ func TestPersonValidateConfig(t *testing.T) {
 	name := "Иван"
 
 	t.Run("no name errors", func(t *testing.T) {
+		RegisterTestingT(t)
 		resp := &resource.ValidateConfigResponse{}
 		r.ValidateConfig(ctx, resource.ValidateConfigRequest{Config: personConfig(t, nil, nil)}, resp)
-		if !resp.Diagnostics.HasError() {
-			t.Error("expected an error when neither first_name nor last_name is set")
-		}
+		Expect(resp.Diagnostics.HasError()).To(BeTrue(), "expected an error when neither first_name nor last_name is set")
 	})
 
 	t.Run("first name ok", func(t *testing.T) {
+		RegisterTestingT(t)
 		resp := &resource.ValidateConfigResponse{}
 		r.ValidateConfig(ctx, resource.ValidateConfigRequest{Config: personConfig(t, &name, nil)}, resp)
-		if resp.Diagnostics.HasError() {
-			t.Errorf("unexpected error: %v", resp.Diagnostics)
-		}
+		Expect(resp.Diagnostics.HasError()).To(BeFalse())
 	})
 
 	t.Run("last name ok", func(t *testing.T) {
+		RegisterTestingT(t)
 		resp := &resource.ValidateConfigResponse{}
 		r.ValidateConfig(ctx, resource.ValidateConfigRequest{Config: personConfig(t, nil, &name)}, resp)
-		if resp.Diagnostics.HasError() {
-			t.Errorf("unexpected error: %v", resp.Diagnostics)
-		}
+		Expect(resp.Diagnostics.HasError()).To(BeFalse())
 	})
 }

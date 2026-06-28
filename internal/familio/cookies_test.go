@@ -1,32 +1,31 @@
 package familio
 
-import "testing"
+import (
+	"testing"
+
+	. "github.com/onsi/gomega"
+)
 
 func TestCookiesFromHeader(t *testing.T) {
+	RegisterTestingT(t)
 	cookies := CookiesFromHeader("t=abc123;  other=xyz ; =skip; bad")
-	if len(cookies) != 2 {
-		t.Fatalf("expected 2 cookies, got %d: %+v", len(cookies), cookies)
-	}
-	if cookies[0].Name != "t" || cookies[0].Value != "abc123" {
-		t.Errorf("first cookie = %s=%s, want t=abc123", cookies[0].Name, cookies[0].Value)
-	}
-	if cookies[1].Name != "other" || cookies[1].Value != "xyz" {
-		t.Errorf("second cookie = %s=%s, want other=xyz", cookies[1].Name, cookies[1].Value)
-	}
+	Expect(cookies).To(HaveLen(2))
+	Expect(cookies[0].Name).To(Equal("t"))
+	Expect(cookies[0].Value).To(Equal("abc123"))
+	Expect(cookies[1].Name).To(Equal("other"))
+	Expect(cookies[1].Value).To(Equal("xyz"))
 }
 
 func TestCookiesFromHeaderEmpty(t *testing.T) {
-	if got := CookiesFromHeader("   "); got != nil {
-		t.Errorf("expected nil for blank header, got %+v", got)
-	}
+	RegisterTestingT(t)
+	Expect(CookiesFromHeader("   ")).To(BeNil())
 }
 
 func TestCookieFromSessionToken(t *testing.T) {
+	RegisterTestingT(t)
 	cookies := CookieFromSessionToken("  tok  ")
-	if len(cookies) != 1 || cookies[0].Name != "t" || cookies[0].Value != "tok" {
-		t.Fatalf("got %+v, want single t=tok cookie", cookies)
-	}
-	if got := CookieFromSessionToken(""); got != nil {
-		t.Errorf("expected nil for empty token, got %+v", got)
-	}
+	Expect(cookies).To(HaveLen(1))
+	Expect(cookies[0].Name).To(Equal("t"))
+	Expect(cookies[0].Value).To(Equal("tok"))
+	Expect(CookieFromSessionToken("")).To(BeNil())
 }

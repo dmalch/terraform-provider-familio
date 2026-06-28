@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	. "github.com/onsi/gomega"
 
 	"github.com/dmalch/terraform-provider-familio/internal/familio"
 )
@@ -42,9 +43,8 @@ func TestDateRangeValidator(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := validateRange(t, tc.in); got != tc.wantError {
-				t.Errorf("hasError = %v, want %v", got, tc.wantError)
-			}
+			RegisterTestingT(t)
+			Expect(validateRange(t, tc.in)).To(Equal(tc.wantError))
 		})
 	}
 }

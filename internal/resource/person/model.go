@@ -3,29 +3,23 @@ package person
 import "github.com/hashicorp/terraform-plugin-framework/types"
 
 // ResourceModel is the familio_person state. It maps to familio's "basic"
-// person fields plus the birth/death life events (modelled as nested date
-// blocks). Relationships (parents/spouse) are events too and are managed
-// elsewhere — see the familio_marriage resource and internal/familio/API.md.
+// person fields plus the birth/death/christening life events, each grouped into
+// a nested block carrying its date, place, comment (and, for birth, parents).
+// Spouses are events too and are managed elsewhere — see the familio_marriage
+// resource and internal/familio/API.md.
 type ResourceModel struct {
-	UUID               types.String `tfsdk:"uuid"`
-	FirstName          types.String `tfsdk:"first_name"`
-	LastName           types.String `tfsdk:"last_name"`
-	Patronymic         types.String `tfsdk:"patronymic"`
-	BirthFirstName     types.String `tfsdk:"birth_first_name"`
-	BirthLastName      types.String `tfsdk:"birth_last_name"`
-	Gender             types.String `tfsdk:"gender"`
-	Privacy            types.String `tfsdk:"privacy"`
-	BirthDate          types.Object `tfsdk:"birth_date"`
-	DeathDate          types.Object `tfsdk:"death_date"`
-	ChristeningDate    types.Object `tfsdk:"christening_date"`
-	BirthPlace         types.String `tfsdk:"birth_place"`
-	DeathPlace         types.String `tfsdk:"death_place"`
-	ChristeningPlace   types.String `tfsdk:"christening_place"`
-	BirthComment       types.String `tfsdk:"birth_comment"`
-	DeathComment       types.String `tfsdk:"death_comment"`
-	ChristeningComment types.String `tfsdk:"christening_comment"`
-	Parents            types.Set    `tfsdk:"parents"`
-	DisplayName        types.String `tfsdk:"display_name"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	UpdatedAt          types.String `tfsdk:"updated_at"`
+	UUID           types.String `tfsdk:"uuid"`
+	FirstName      types.String `tfsdk:"first_name"`
+	LastName       types.String `tfsdk:"last_name"`
+	Patronymic     types.String `tfsdk:"patronymic"`
+	BirthFirstName types.String `tfsdk:"birth_first_name"`
+	BirthLastName  types.String `tfsdk:"birth_last_name"`
+	Gender         types.String `tfsdk:"gender"`
+	Privacy        types.String `tfsdk:"privacy"`
+	Birth          types.Object `tfsdk:"birth"`
+	Death          types.Object `tfsdk:"death"`
+	Christening    types.Object `tfsdk:"christening"`
+	DisplayName    types.String `tfsdk:"display_name"`
+	CreatedAt      types.String `tfsdk:"created_at"`
+	UpdatedAt      types.String `tfsdk:"updated_at"`
 }

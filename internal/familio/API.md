@@ -218,14 +218,14 @@ behaviour.
 
 How the resources use the surface above:
 
-- **`familio_person`** — the `basic` fields, plus `birth`/`death`/`baptism` events folded in as
-  nested date blocks (`birth_date`/`death_date`/`christening_date`), settlement attributes
-  (`birth_place`/`death_place`/`christening_place`, each a bare settlement uuid wrapped as
-  `{uuid}` on write, read back from `settlement.uuid`) and free-text `*_comment` attributes. A
-  child's **`parents`** set (0–2 uuids) are the `parent` participants on its birth event. Birth
-  date/parents/place/comment and death date/place/comment edit **in place** via the POST-upsert;
-  christening (a repeatable `baptism`) edits via delete-then-create. Read picks the birth event
-  where the person is the `child` (a parent's `/events` also lists their children's births).
+- **`familio_person`** — the `basic` fields, plus the `birth`/`death`/`christening` events as
+  nested **blocks**, each grouping its `date`, `place` (a bare settlement uuid wrapped as
+  `{uuid}` on write, read back from `settlement.uuid`) and free-text `comment`. The **`birth`**
+  block also carries **`parents`** (0–2 uuids — the `parent` participants on the birth event).
+  The whole birth block (date/parents/place/comment) and the death block edit **in place** via
+  the POST-upsert; christening (a repeatable `baptism`) edits via delete-then-create. Read picks
+  the birth event where the person is the `child` (a parent's `/events` also lists their
+  children's births). A place/comment is recorded even with an unknown date.
 - **`familio_marriage`** — an association resource over a partner pair; POSTs a `wedding` event
   between two existing persons, with an optional `comment`. It cannot yet edit its event in
   place, so changing partners/date/comment forces replacement (see [Known

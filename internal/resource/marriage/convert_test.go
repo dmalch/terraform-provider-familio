@@ -5,25 +5,23 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	. "github.com/onsi/gomega"
 
 	"github.com/dmalch/terraform-provider-familio/internal/familio"
 )
 
 func TestPartnerListSorted(t *testing.T) {
+	RegisterTestingT(t)
 	set, diags := types.SetValueFrom(context.Background(), types.StringType, []string{"bbb", "aaa"})
-	if diags.HasError() {
-		t.Fatalf("set build: %v", diags)
-	}
+	Expect(diags).To(BeEmpty())
+
 	got, d := partnerList(context.Background(), set)
-	if d.HasError() {
-		t.Fatalf("partnerList: %v", d)
-	}
-	if len(got) != 2 || got[0] != "aaa" || got[1] != "bbb" {
-		t.Errorf("want sorted [aaa bbb], got %v", got)
-	}
+	Expect(d).To(BeEmpty())
+	Expect(got).To(Equal([]string{"aaa", "bbb"}))
 }
 
 func TestFindWedding(t *testing.T) {
+	RegisterTestingT(t)
 	birthID, wedID := "b1", "w1"
 	events := []familio.Event{
 		{UUID: &birthID, Type: familio.EventBirth},
@@ -32,15 +30,10 @@ func TestFindWedding(t *testing.T) {
 			{PersonUUID: "B", Role: familio.RoleSpouse},
 		}},
 	}
-	if got := findWedding(events, "w1"); got == nil {
-		t.Fatal("expected to find wedding w1")
-	} else if s := got.SpouseUUIDs(); len(s) != 2 {
-		t.Errorf("want 2 spouses, got %v", s)
-	}
-	if findWedding(events, "b1") != nil {
-		t.Error("birth event must not match a wedding lookup")
-	}
-	if findWedding(events, "missing") != nil {
-		t.Error("unknown uuid should return nil")
-	}
+
+	wed := findWedding(events, "w1")
+	Expect(wed).ToNot(BeNil())
+	Expect(wed.SpouseUUIDs()).To(ConsistOf("A", "B"))
+	Expect(findWedding(events, "b1")).To(BeNil(), "a birth event must not match a wedding lookup")
+	Expect(findWedding(events, "missing")).To(BeNil())
 }
