@@ -1,11 +1,13 @@
 package familio
 
 import (
-	"sort"
 	"testing"
+
+	. "github.com/onsi/gomega"
 )
 
 func TestChildrenOf(t *testing.T) {
+	RegisterTestingT(t)
 	const person = "uuid-person"
 	events := []Event{
 		// The person's OWN birth (they are the child) — must NOT count as a child.
@@ -16,14 +18,11 @@ func TestChildrenOf(t *testing.T) {
 		// An unrelated birth (person not a participant) — ignored.
 		BirthEvent(nil, "uuid-stranger", []string{"uuid-other"}, "", ""),
 	}
-	got := ChildrenOf(events, person)
-	sort.Strings(got)
-	if len(got) != 2 || got[0] != "uuid-daughter" || got[1] != "uuid-son" {
-		t.Errorf("children = %v, want [uuid-daughter uuid-son]", got)
-	}
+	Expect(ChildrenOf(events, person)).To(ConsistOf("uuid-daughter", "uuid-son"))
 }
 
 func TestSpousesOf(t *testing.T) {
+	RegisterTestingT(t)
 	const person = "uuid-person"
 	events := []Event{
 		WeddingEvent(nil, person, "uuid-wife", ""),
@@ -33,9 +32,5 @@ func TestSpousesOf(t *testing.T) {
 		// Person's own birth — not a wedding, ignored.
 		BirthEvent(nil, person, nil, "", ""),
 	}
-	got := SpousesOf(events, person)
-	sort.Strings(got)
-	if len(got) != 2 || got[0] != "uuid-second-wife" || got[1] != "uuid-wife" {
-		t.Errorf("spouses = %v, want [uuid-second-wife uuid-wife]", got)
-	}
+	Expect(SpousesOf(events, person)).To(ConsistOf("uuid-second-wife", "uuid-wife"))
 }

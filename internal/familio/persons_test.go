@@ -3,22 +3,22 @@ package familio
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	. "github.com/onsi/gomega"
 )
 
 func TestListSettlementPersonsPaginates(t *testing.T) {
+	RegisterTestingT(t)
 	// Two full pages of settlementPageSize, then a short final page.
 	total := settlementPageSize*2 + 5
 	var gotCookie string
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v2/persons" {
-			t.Errorf("unexpected path %q", r.URL.Path)
-		}
+		Expect(r.URL.Path).To(Equal("/api/v2/persons"))
 		gotCookie = r.Header.Get("Cookie")
 
 		page := 1
@@ -47,23 +47,16 @@ func TestListSettlementPersonsPaginates(t *testing.T) {
 		Cookies:   CookiesFromHeader("t=secret"),
 		RateLimit: 1000,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	Expect(err).ToNot(HaveOccurred())
 
 	persons, err := client.ListSettlementPersons(context.Background(), "settlement-uuid")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(persons) != total {
-		t.Errorf("got %d persons, want %d", len(persons), total)
-	}
-	if gotCookie == "" || !contains(gotCookie, "t=secret") {
-		t.Errorf("session cookie not sent; Cookie header = %q", gotCookie)
-	}
+	Expect(err).ToNot(HaveOccurred())
+	Expect(persons).To(HaveLen(total))
+	Expect(gotCookie).To(ContainSubstring("t=secret"), "session cookie not sent")
 }
 
 func TestDoReturnsErrNotFound(t *testing.T) {
+	RegisterTestingT(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
@@ -73,9 +66,7 @@ func TestDoReturnsErrNotFound(t *testing.T) {
 	// ListSettlementPersons uses the public (no-bearer) path, so the 404 maps
 	// straight through the transport to ErrNotFound.
 	_, err := client.ListSettlementPersons(context.Background(), "missing")
-	if !errors.Is(err, ErrNotFound) {
-		t.Errorf("got %v, want ErrNotFound", err)
-	}
+	Expect(err).To(MatchError(ErrNotFound))
 }
 
 func TestFlexDateUnmarshal(t *testing.T) {
@@ -92,26 +83,14 @@ func TestFlexDateUnmarshal(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			RegisterTestingT(t)
 			var p Person
-			if err := json.Unmarshal([]byte(tc.json), &p); err != nil {
-				t.Fatalf("unmarshal: %v", err)
-			}
+			Expect(json.Unmarshal([]byte(tc.json), &p)).To(Succeed())
 			v, ok := p.BirthDate.Value()
-			if ok != tc.wantPresent {
-				t.Errorf("present = %v, want %v", ok, tc.wantPresent)
-			}
-			if ok && v != tc.wantValue {
-				t.Errorf("value = %q, want %q", v, tc.wantValue)
+			Expect(ok).To(Equal(tc.wantPresent))
+			if ok {
+				Expect(v).To(Equal(tc.wantValue))
 			}
 		})
 	}
-}
-
-func contains(haystack, needle string) bool {
-	for i := 0; i+len(needle) <= len(haystack); i++ {
-		if haystack[i:i+len(needle)] == needle {
-			return true
-		}
-	}
-	return false
 }

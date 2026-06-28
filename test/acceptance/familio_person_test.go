@@ -21,19 +21,19 @@ func TestAccPerson_basic(t *testing.T) {
 			{
 				Config: `
 resource "familio_person" "test" {
-  first_name       = "АкцТест"
-  last_name        = "Персонов"
-  gender           = "male"
-  privacy          = "invisible"
-  birth_date       = { year = 1850 }
-  christening_date = { year = 1850, month = 4 }
+  first_name  = "АкцТест"
+  last_name   = "Персонов"
+  gender      = "male"
+  privacy     = "invisible"
+  birth       = { date = { year = 1850 } }
+  christening = { date = { year = 1850, month = 4 } }
 }`,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("first_name"), knownvalue.StringExact("АкцТест")),
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("last_name"), knownvalue.StringExact("Персонов")),
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("gender"), knownvalue.StringExact("male")),
-					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("birth_date").AtMapKey("year"), knownvalue.Int64Exact(1850)),
-					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("christening_date").AtMapKey("month"), knownvalue.Int64Exact(4)),
+					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("birth").AtMapKey("date").AtMapKey("year"), knownvalue.Int64Exact(1850)),
+					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("christening").AtMapKey("date").AtMapKey("month"), knownvalue.Int64Exact(4)),
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("uuid"), knownvalue.NotNull()),
 				},
 			},
@@ -42,13 +42,13 @@ resource "familio_person" "test" {
 				// optimistic-lock header) and add a death date (event upsert).
 				Config: `
 resource "familio_person" "test" {
-  first_name       = "АкцТестИзм"
-  last_name        = "Персонов"
-  gender           = "male"
-  privacy          = "invisible"
-  birth_date       = { year = 1850 }
-  death_date       = { year = 1899 }
-  christening_date = { year = 1851 }
+  first_name  = "АкцТестИзм"
+  last_name   = "Персонов"
+  gender      = "male"
+  privacy     = "invisible"
+  birth       = { date = { year = 1850 } }
+  death       = { date = { year = 1899 } }
+  christening = { date = { year = 1851 } }
 }`,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -57,9 +57,9 @@ resource "familio_person" "test" {
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("first_name"), knownvalue.StringExact("АкцТестИзм")),
-					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("death_date").AtMapKey("year"), knownvalue.Int64Exact(1899)),
+					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("death").AtMapKey("date").AtMapKey("year"), knownvalue.Int64Exact(1899)),
 					// christening edited in place (delete + recreate the baptism event).
-					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("christening_date").AtMapKey("year"), knownvalue.Int64Exact(1851)),
+					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("christening").AtMapKey("date").AtMapKey("year"), knownvalue.Int64Exact(1851)),
 				},
 			},
 			{
@@ -82,13 +82,13 @@ resource "familio_person" "test" {
 func TestAccPerson_approximateDates(t *testing.T) {
 	const config = `
 resource "familio_person" "approx" {
-  first_name       = "АкцТест"
-  last_name        = "Примернов"
-  gender           = "male"
-  privacy          = "invisible"
-  birth_date       = { year = 1846, circa = true }
-  christening_date = { year = 1846, calendar = "julian" }
-  death_date       = { year = 1901, range = "before" }
+  first_name  = "АкцТест"
+  last_name   = "Примернов"
+  gender      = "male"
+  privacy     = "invisible"
+  birth       = { date = { year = 1846, circa = true } }
+  christening = { date = { year = 1846, calendar = "julian" } }
+  death       = { date = { year = 1901, range = "before" } }
 }`
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -98,9 +98,9 @@ resource "familio_person" "approx" {
 			{
 				Config: config,
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("familio_person.approx", tfjsonpath.New("birth_date").AtMapKey("circa"), knownvalue.Bool(true)),
-					statecheck.ExpectKnownValue("familio_person.approx", tfjsonpath.New("christening_date").AtMapKey("calendar"), knownvalue.StringExact("julian")),
-					statecheck.ExpectKnownValue("familio_person.approx", tfjsonpath.New("death_date").AtMapKey("range"), knownvalue.StringExact("before")),
+					statecheck.ExpectKnownValue("familio_person.approx", tfjsonpath.New("birth").AtMapKey("date").AtMapKey("circa"), knownvalue.Bool(true)),
+					statecheck.ExpectKnownValue("familio_person.approx", tfjsonpath.New("christening").AtMapKey("date").AtMapKey("calendar"), knownvalue.StringExact("julian")),
+					statecheck.ExpectKnownValue("familio_person.approx", tfjsonpath.New("death").AtMapKey("date").AtMapKey("range"), knownvalue.StringExact("before")),
 				},
 			},
 			{
@@ -113,10 +113,10 @@ resource "familio_person" "approx" {
 	})
 }
 
-// TestAccPerson_places exercises #12: birth/death/christening place set to real
-// familio settlement UUIDs. It statechecks the birth place, asserts an empty
-// re-plan (the structured settlement round-trips with no permadiff), then edits
-// the birth place in place and verifies the change. Uses real settlements:
+// TestAccPerson_places exercises #12: birth/death/christening place + comment set
+// inside the life-event blocks, to real familio settlement UUIDs. It statechecks
+// the values, asserts an empty re-plan (the structured settlement round-trips
+// with no permadiff), then edits the birth place in place. Uses real settlements:
 // Нижняя Верея and Верхняя Верея (Нижегородская область, город Выкса).
 func TestAccPerson_places(t *testing.T) {
 	const nizhnyayaVereya = "40d1b180-b739-4ecb-9ee5-ced6fefcd0d8"
@@ -124,17 +124,17 @@ func TestAccPerson_places(t *testing.T) {
 	config := func(birthPlace string) string {
 		return fmt.Sprintf(`
 resource "familio_person" "place" {
-  first_name        = "АкцТест"
-  last_name         = "Местов"
-  gender            = "male"
-  privacy           = "invisible"
-  birth_date        = { year = 1900 }
-  birth_place       = %q
-  birth_comment     = "Метрическая книга, запись о рождении."
-  death_date        = { year = 1970 }
-  death_place       = %q
-  christening_date  = { year = 1900 }
-  christening_place = %q
+  first_name = "АкцТест"
+  last_name  = "Местов"
+  gender     = "male"
+  privacy    = "invisible"
+  birth = {
+    date    = { year = 1900 }
+    place   = %q
+    comment = "Метрическая книга, запись о рождении."
+  }
+  death       = { date = { year = 1970 }, place = %q }
+  christening  = { date = { year = 1900 }, place = %q }
 }`, birthPlace, nizhnyayaVereya, nizhnyayaVereya)
 	}
 	resource.Test(t, resource.TestCase{
@@ -145,10 +145,10 @@ resource "familio_person" "place" {
 			{
 				Config: config(nizhnyayaVereya),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("birth_place"), knownvalue.StringExact(nizhnyayaVereya)),
-					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("death_place"), knownvalue.StringExact(nizhnyayaVereya)),
-					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("christening_place"), knownvalue.StringExact(nizhnyayaVereya)),
-					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("birth_comment"), knownvalue.StringExact("Метрическая книга, запись о рождении.")),
+					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("birth").AtMapKey("place"), knownvalue.StringExact(nizhnyayaVereya)),
+					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("death").AtMapKey("place"), knownvalue.StringExact(nizhnyayaVereya)),
+					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("christening").AtMapKey("place"), knownvalue.StringExact(nizhnyayaVereya)),
+					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("birth").AtMapKey("comment"), knownvalue.StringExact("Метрическая книга, запись о рождении.")),
 				},
 			},
 			{
@@ -167,16 +167,17 @@ resource "familio_person" "place" {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("birth_place"), knownvalue.StringExact(verkhnyayaVereya)),
+					statecheck.ExpectKnownValue("familio_person.place", tfjsonpath.New("birth").AtMapKey("place"), knownvalue.StringExact(verkhnyayaVereya)),
 				},
 			},
 		},
 	})
 }
 
-// TestAccPerson_parents covers parentage (a child with two parents) and verifies
-// that changing a parent and editing the birth date both apply IN PLACE — i.e.
-// the child is updated, not replaced (which would lose its uuid and edges).
+// TestAccPerson_parents covers parentage (a child with two parents inside the
+// birth block) and verifies that changing a parent and editing the birth date
+// both apply IN PLACE — i.e. the child is updated, not replaced (which would
+// lose its uuid and edges).
 func TestAccPerson_parents(t *testing.T) {
 	const parents = `
 resource "familio_person" "dad" {
@@ -184,7 +185,7 @@ resource "familio_person" "dad" {
   last_name  = "Отцов"
   gender     = "male"
   privacy    = "invisible"
-  birth_date = { year = 1860 }
+  birth      = { date = { year = 1860 } }
 }
 
 resource "familio_person" "mom" {
@@ -206,12 +207,14 @@ resource "familio_person" "child" {
   last_name  = "Дитятев"
   gender     = "male"
   privacy    = "invisible"
-  birth_date = { year = 1880 }
-  parents    = [familio_person.dad.uuid, familio_person.mom.uuid]
+  birth = {
+    date    = { year = 1880 }
+    parents = [familio_person.dad.uuid, familio_person.mom.uuid]
+  }
 }`,
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("familio_person.child", tfjsonpath.New("parents"), knownvalue.SetSizeExact(2)),
-					statecheck.ExpectKnownValue("familio_person.child", tfjsonpath.New("birth_date").AtMapKey("year"), knownvalue.Int64Exact(1880)),
+					statecheck.ExpectKnownValue("familio_person.child", tfjsonpath.New("birth").AtMapKey("parents"), knownvalue.SetSizeExact(2)),
+					statecheck.ExpectKnownValue("familio_person.child", tfjsonpath.New("birth").AtMapKey("date").AtMapKey("year"), knownvalue.Int64Exact(1880)),
 				},
 			},
 			{
@@ -222,8 +225,10 @@ resource "familio_person" "child" {
   last_name  = "Дитятев"
   gender     = "male"
   privacy    = "invisible"
-  birth_date = { year = 1881 }
-  parents    = [familio_person.dad.uuid]
+  birth = {
+    date    = { year = 1881 }
+    parents = [familio_person.dad.uuid]
+  }
 }`,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -231,15 +236,15 @@ resource "familio_person" "child" {
 					},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("familio_person.child", tfjsonpath.New("parents"), knownvalue.SetSizeExact(1)),
-					statecheck.ExpectKnownValue("familio_person.child", tfjsonpath.New("birth_date").AtMapKey("year"), knownvalue.Int64Exact(1881)),
+					statecheck.ExpectKnownValue("familio_person.child", tfjsonpath.New("birth").AtMapKey("parents"), knownvalue.SetSizeExact(1)),
+					statecheck.ExpectKnownValue("familio_person.child", tfjsonpath.New("birth").AtMapKey("date").AtMapKey("year"), knownvalue.Int64Exact(1881)),
 				},
 			},
 			{
 				// Regression for #4: dad is a parent, so dad's /events also lists the
 				// child's birth event. Importing dad must read back dad's OWN birth
 				// year (1860), not the child's (1881); ImportStateVerify fails if
-				// birth_date is dropped to null or read from the wrong event.
+				// birth is dropped to null or read from the wrong event.
 				ResourceName:                         "familio_person.dad",
 				ImportState:                          true,
 				ImportStateVerify:                    true,

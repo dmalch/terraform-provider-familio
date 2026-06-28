@@ -32,7 +32,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 
 	applyBasicToState(&created.Basic, &plan)
-	applyEventsToState(created.Events, &plan)
+	resp.Diagnostics.Append(applyEventsToState(ctx, created.Events, &plan)...)
 	plan.DisplayName = types.StringValue(created.Basic.DisplayName)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)

@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	. "github.com/onsi/gomega"
 )
 
 // TestListSettlementPersonsLive hits the real familio.org endpoint to prove the
@@ -18,13 +20,12 @@ func TestListSettlementPersonsLive(t *testing.T) {
 	if os.Getenv("FAMILIO_NETWORK_TEST") != "1" {
 		t.Skip("set FAMILIO_NETWORK_TEST=1 to run the live familio.org decode test")
 	}
+	RegisterTestingT(t)
 
 	const zhuravkino = "e0c1a09c-b7ed-4d5c-a22f-3a86db42bbc6"
 
 	client, err := NewClient(Options{RateLimit: 1000})
-	if err != nil {
-		t.Fatal(err)
-	}
+	Expect(err).ToNot(HaveOccurred())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -34,17 +35,13 @@ func TestListSettlementPersonsLive(t *testing.T) {
 	q.Set("itemsPerPage", "300")
 	q.Set("page", "1")
 	req, err := client.newRequest(ctx, http.MethodGet, "persons", q, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var page personsPage
-	if err := client.do(req, &page); err != nil {
-		t.Fatalf("live decode failed: %v", err)
-	}
+	Expect(err).ToNot(HaveOccurred())
 
-	if page.Pager.TotalItems == 0 || len(page.Data) == 0 {
-		t.Fatalf("expected persons, got pager=%+v len=%d", page.Pager, len(page.Data))
-	}
+	var page personsPage
+	Expect(client.do(req, &page)).To(Succeed(), "live decode failed")
+
+	Expect(page.Pager.TotalItems).ToNot(BeZero())
+	Expect(page.Data).ToNot(BeEmpty())
 	t.Logf("decoded %d/%d persons; sample uuid=%s display=%q catalogKey=%v birthDate=%q",
 		len(page.Data), page.Pager.TotalItems, page.Data[0].UUID,
 		page.Data[0].DisplayName, page.Data[0].CatalogKey, page.Data[0].BirthDate.Formatted)

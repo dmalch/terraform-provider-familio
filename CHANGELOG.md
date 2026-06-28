@@ -1,3 +1,28 @@
+## 0.8.0
+
+BREAKING CHANGES:
+
+* **`familio_person` life events are now nested blocks.** The flat `*_date` / `*_place` /
+  `*_comment` attributes and the top-level `parents` set are replaced by three blocks —
+  `birth`, `death`, `christening` — each grouping that event's `date`, `place` and `comment`
+  (and, for `birth`, `parents`):
+
+  ```hcl
+  # before (≤ 0.7.0)                # after (0.8.0)
+  birth_date  = { year = 1880 }     birth = {
+  birth_place = "<uuid>"              date    = { year = 1880 }
+  parents     = [a.uuid, b.uuid]      place   = "<uuid>"
+                                      comment = "..."
+                                      parents = [a.uuid, b.uuid]
+                                    }
+  ```
+
+  This mirrors familio's own model (a date, place, comment and parents are all facets of one
+  event) and keeps the resource flat-free as more event fields are added. Update configs and
+  re-`import` / refresh state. The `date` block's contents (year/month/day, circa, range,
+  end_*, calendar) and all behaviour (in-place editing, no permadiff, a place/comment recorded
+  even with an unknown date) are unchanged.
+
 ## 0.7.0
 
 FEATURES:

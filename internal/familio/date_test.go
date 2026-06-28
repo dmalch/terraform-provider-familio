@@ -1,6 +1,10 @@
 package familio
 
-import "testing"
+import (
+	"testing"
+
+	. "github.com/onsi/gomega"
+)
 
 func intp(v int) *int { return &v }
 
@@ -62,8 +66,8 @@ func TestEventDateFromRange(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := EventDateFromRange(tc.in)
-			assertEventDateEqual(t, got, tc.want)
+			RegisterTestingT(t)
+			Expect(EventDateFromRange(tc.in)).To(Equal(tc.want))
 		})
 	}
 }
@@ -81,51 +85,7 @@ func TestRangeFromEventDateRoundTrip(t *testing.T) {
 		{Year: 1846, Calendar: calendarJulian, Range: RangeBetween, EndYear: intp(1850)},
 	}
 	for _, in := range cases {
-		got := RangeFromEventDate(EventDateFromRange(in))
-		assertDateRangeEqual(t, got, in)
+		RegisterTestingT(t)
+		Expect(RangeFromEventDate(EventDateFromRange(in))).To(Equal(in))
 	}
-}
-
-func assertEventDateEqual(t *testing.T, got, want EventDate) {
-	t.Helper()
-	if got.Calendar != want.Calendar || got.Type != want.Type {
-		t.Fatalf("calendar/type = %q/%q, want %q/%q", got.Calendar, got.Type, want.Calendar, want.Type)
-	}
-	assertDatePartEqual(t, "first", got.First, want.First)
-	assertDatePartEqual(t, "second", got.Second, want.Second)
-}
-
-func assertDatePartEqual(t *testing.T, label string, got, want *DatePart) {
-	t.Helper()
-	if (got == nil) != (want == nil) {
-		t.Fatalf("%s presence: got %v want %v", label, got, want)
-	}
-	if got == nil {
-		return
-	}
-	if got.Year != want.Year || got.Type != want.Type || !intEq(got.Month, want.Month) || !intEq(got.Day, want.Day) {
-		t.Fatalf("%s = %+v, want %+v", label, got, want)
-	}
-}
-
-func assertDateRangeEqual(t *testing.T, got, want *DateRange) {
-	t.Helper()
-	if (got == nil) != (want == nil) {
-		t.Fatalf("range presence: got %v want %v", got, want)
-	}
-	if got == nil {
-		return
-	}
-	if got.Year != want.Year || got.Circa != want.Circa || got.Range != want.Range ||
-		got.Calendar != want.Calendar || !intEq(got.Month, want.Month) || !intEq(got.Day, want.Day) ||
-		!intEq(got.EndYear, want.EndYear) || !intEq(got.EndMonth, want.EndMonth) || !intEq(got.EndDay, want.EndDay) {
-		t.Fatalf("range = %+v, want %+v", got, want)
-	}
-}
-
-func intEq(a, b *int) bool {
-	if (a == nil) != (b == nil) {
-		return false
-	}
-	return a == nil || *a == *b
 }
