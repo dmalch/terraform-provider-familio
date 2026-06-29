@@ -11,7 +11,8 @@ A [Terraform](https://www.terraform.io) provider for [familio.org](https://famil
 ## Status
 
 familio.org has no documented public write API; its endpoints were reverse-engineered
-from the tree editor (see [`internal/familio/API.md`](internal/familio/API.md)).
+from the tree editor (see [`API.md`](https://github.com/dmalch/go-familio/blob/main/API.md)
+in the `go-familio` client module).
 
 | Capability | Status |
 |---|---|
@@ -127,7 +128,8 @@ go build ./...
 go test ./...
 ```
 
-The HTTP client is inlined under [`internal/familio/`](internal/familio); it mirrors the
+The HTTP client lives in a separate module,
+[`go-familio`](https://github.com/dmalch/go-familio) (pinned in `go.mod`); it mirrors the
 cookie-auth model of `go-geni`'s web client. The provider plumbing follows
 `terraform-provider-genealogy` / `terraform-provider-myheritage` conventions.
 

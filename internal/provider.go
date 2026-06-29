@@ -11,11 +11,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 
+	"github.com/dmalch/go-familio"
 	"github.com/dmalch/terraform-provider-familio/internal/config"
 	dsperson "github.com/dmalch/terraform-provider-familio/internal/datasource/person"
 	dssettlement "github.com/dmalch/terraform-provider-familio/internal/datasource/settlement"
 	dssettlementpersons "github.com/dmalch/terraform-provider-familio/internal/datasource/settlementpersons"
-	"github.com/dmalch/terraform-provider-familio/internal/familio"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/event"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/marriage"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/person"

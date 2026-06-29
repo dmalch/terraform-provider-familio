@@ -10,8 +10,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 
+	"github.com/dmalch/go-familio"
 	"github.com/dmalch/terraform-provider-familio/internal/config"
-	"github.com/dmalch/terraform-provider-familio/internal/familio"
 )
 
 type DataSource struct {

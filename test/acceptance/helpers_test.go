@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/dmalch/go-familio"
 	"github.com/dmalch/terraform-provider-familio/internal"
-	"github.com/dmalch/terraform-provider-familio/internal/familio"
 )
 
 // testProtoV6ProviderFactories wires the in-process provider for the test harness.

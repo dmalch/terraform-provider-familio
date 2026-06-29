@@ -3,7 +3,7 @@ package config
 import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/dmalch/terraform-provider-familio/internal/familio"
+	"github.com/dmalch/go-familio"
 )
 
 // FamilioProviderConfig is the decoded provider block.
