@@ -42,7 +42,8 @@ func TestApplySourceToState(t *testing.T) {
 	}
 	applySourceToState(&familio.Source{
 		UUID: "u1", Type: familio.SourceTypeCatalogPerson, Comment: "note",
-		Name: "Списки", Requisites: "Иванов", Years: "", Catalog: "",
+		Name: "Списки", Requisites: "Иванов", Years: "",
+		Catalog:   &familio.SourceCatalog{Key: "gwarmil"},
 		CreatedAt: "t1", UpdatedAt: "t2",
 	}, m)
 

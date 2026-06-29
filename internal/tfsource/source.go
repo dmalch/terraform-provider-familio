@@ -66,7 +66,7 @@ func ModelFromSource(s familio.Source, catalogKey types.String) Model {
 		Name:          strOrNull(s.Name),
 		Requisites:    strOrNull(s.Requisites),
 		Years:         strOrNull(s.Years),
-		Catalog:       strOrNull(s.Catalog),
+		Catalog:       strOrNull(s.Catalog.String()),
 		CreatedAt:     types.StringValue(s.CreatedAt),
 		UpdatedAt:     types.StringValue(s.UpdatedAt),
 	}

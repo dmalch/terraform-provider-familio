@@ -27,12 +27,15 @@ func TestModelFromSourcePreservesCatalogKey(t *testing.T) {
 	RegisterTestingT(t)
 	s := familio.Source{
 		UUID: "u2", Type: familio.SourceTypeCatalogPerson, Comment: "",
-		Name: "Списки", Requisites: "Иванов", Years: "", Catalog: "",
+		Name: "Списки", Requisites: "Иванов", Years: "",
+		Catalog:   &familio.SourceCatalog{Key: "gwarmil"},
 		CreatedAt: "t1", UpdatedAt: "t2",
 	}
 	// catalog_key is write-only at the API, so it's carried from prior state.
 	m := ModelFromSource(s, types.StringValue("gwarmil"))
 	Expect(m.CatalogKey.ValueString()).To(Equal("gwarmil"))
+	// the server's catalog OBJECT maps to its key on the computed attribute
+	Expect(m.Catalog.ValueString()).To(Equal("gwarmil"))
 	Expect(m.Name.ValueString()).To(Equal("Списки"))
 	// Server-empty strings become null (no permadiff on omitted optionals).
 	Expect(m.Comment.IsNull()).To(BeTrue())

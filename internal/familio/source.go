@@ -1,7 +1,9 @@
 package familio
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
 )
 
@@ -26,10 +28,39 @@ type Source struct {
 	Comment    string `json:"comment"`
 	Name       string `json:"name,omitempty"`
 	Requisites string `json:"requisites,omitempty"`
-	Years      string `json:"years,omitempty"`
-	Catalog    string `json:"catalog,omitempty"`
-	CreatedAt  string `json:"createdAt,omitempty"`
-	UpdatedAt  string `json:"updatedAt,omitempty"`
+	Years      string         `json:"years,omitempty"`
+	Catalog    *SourceCatalog `json:"catalog,omitempty"`
+	CreatedAt  string         `json:"createdAt,omitempty"`
+	UpdatedAt  string         `json:"updatedAt,omitempty"`
+}
+
+// SourceCatalog is the server-derived catalog descriptor on a catalog_person
+// source. The API returns it as an OBJECT ({key, hidden}); a `case` source omits
+// it. UnmarshalJSON also tolerates a bare string or null for forward-compat.
+type SourceCatalog struct {
+	Key    string `json:"key"`
+	Hidden bool   `json:"hidden"`
+}
+
+func (c *SourceCatalog) UnmarshalJSON(b []byte) error {
+	b = bytes.TrimSpace(b)
+	if len(b) == 0 || string(b) == "null" {
+		return nil
+	}
+	if b[0] == '"' { // tolerate a bare string catalog
+		return json.Unmarshal(b, &c.Key)
+	}
+	type alias SourceCatalog
+	return json.Unmarshal(b, (*alias)(c))
+}
+
+// String renders the catalog for the computed `catalog` attribute: its key
+// (the stable catalog id, e.g. "vss"), or "" when absent.
+func (c *SourceCatalog) String() string {
+	if c == nil {
+		return ""
+	}
+	return c.Key
 }
 
 // SourceRef is the write body of a source create: the reference triple familio

@@ -23,7 +23,7 @@ func applySourceToState(s *familio.Source, m *ResourceModel) {
 	m.Name = strOrNull(s.Name)
 	m.Requisites = strOrNull(s.Requisites)
 	m.Years = strOrNull(s.Years)
-	m.Catalog = strOrNull(s.Catalog)
+	m.Catalog = strOrNull(s.Catalog.String())
 	m.CreatedAt = types.StringValue(s.CreatedAt)
 	m.UpdatedAt = types.StringValue(s.UpdatedAt)
 }

@@ -54,3 +54,21 @@ func TestFindSourceByID(t *testing.T) {
 	Expect(FindSourceByID(sources, "b").Type).To(Equal(SourceTypeCatalogPerson))
 	Expect(FindSourceByID(sources, "missing")).To(BeNil())
 }
+
+// TestSourceCatalogUnmarshal locks the catalog field decode: the familio API
+// returns `catalog` as an OBJECT {key, hidden} for catalog_person sources (a
+// `case` omits it), and the decoder also tolerates a bare string / null.
+func TestSourceCatalogUnmarshal(t *testing.T) {
+	RegisterTestingT(t)
+	cases := map[string]string{
+		`{"uuid":"u","type":"catalog_person","catalog":{"key":"vss","hidden":false}}`: "vss",
+		`{"uuid":"u","type":"catalog_person","catalog":"gwarmil"}`:                     "gwarmil",
+		`{"uuid":"u","type":"case","catalog":null}`:                                    "",
+		`{"uuid":"u","type":"case"}`:                                                   "",
+	}
+	for body, want := range cases {
+		var s Source
+		Expect(json.Unmarshal([]byte(body), &s)).To(Succeed(), body)
+		Expect(s.Catalog.String()).To(Equal(want), body)
+	}
+}
