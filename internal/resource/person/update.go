@@ -71,6 +71,22 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 	}
 
+	// Biography edits in place via its own sub-resource, which carries its own
+	// optimistic-lock version (NOT /basic's) — read it fresh, then PUT.
+	if biographyChanged(&plan, &state) {
+		current, err := r.client.GetPersonBiography(ctx, uuid)
+		if err != nil {
+			resp.Diagnostics.AddError("Cannot read familio_person biography before update", err.Error())
+			return
+		}
+		updated, err := r.client.UpdatePersonBiography(ctx, uuid, strValue(plan.Biography), current.UpdatedAt)
+		if err != nil {
+			resp.Diagnostics.AddError("Cannot update familio_person biography", err.Error())
+			return
+		}
+		plan.Biography = types.StringValue(updated.Text)
+	}
+
 	// Sources are an authoritative set when the block is present. Reconcile only
 	// on change; a null plan block means "unmanaged" and leaves familio untouched.
 	if !plan.Sources.Equal(state.Sources) {

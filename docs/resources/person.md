@@ -21,6 +21,9 @@ resource "familio_person" "ivan" {
   gender     = "male"
   privacy    = "visible_for_all"
 
+  # Free-text life description (the person's «tab=2» biography); edited in place.
+  biography = "Крестьянин села Нижняя Верея. Участник Первой мировой войны."
+
   # Each life event is a block grouping its date, place (a familio settlement
   # UUID — «Место рождения») and a free-text comment.
   birth = {
@@ -129,6 +132,7 @@ resource "familio_person" "pyotr" {
 
 ### Optional
 
+- `biography` (String) Free-text biography (the person's «tab=2» life description). Edited in place.
 - `birth` (Attributes) Birth event — date, place, comment and the person's parents. Edited in place. (see [below for nested schema](#nestedatt--birth))
 - `birth_first_name` (String) Given name at birth (maiden), if different.
 - `birth_last_name` (String) Surname at birth (maiden), if different.

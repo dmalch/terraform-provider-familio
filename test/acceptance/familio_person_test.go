@@ -27,6 +27,7 @@ resource "familio_person" "test" {
   privacy     = "invisible"
   birth       = { date = { year = 1850 } }
   christening = { date = { year = 1850, month = 4 } }
+  biography   = "Крестьянин села Нижняя Верея."
 }`,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("first_name"), knownvalue.StringExact("АкцТест")),
@@ -34,12 +35,14 @@ resource "familio_person" "test" {
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("gender"), knownvalue.StringExact("male")),
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("birth").AtMapKey("date").AtMapKey("year"), knownvalue.Int64Exact(1850)),
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("christening").AtMapKey("date").AtMapKey("month"), knownvalue.Int64Exact(4)),
+					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("biography"), knownvalue.StringExact("Крестьянин села Нижняя Верея.")),
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("uuid"), knownvalue.NotNull()),
 				},
 			},
 			{
 				// In-place edit: change a basic field (exercises the X-Base-Version
-				// optimistic-lock header) and add a death date (event upsert).
+				// optimistic-lock header), add a death date (event upsert), and edit
+				// the biography in place (its own /biography sub-resource version).
 				Config: `
 resource "familio_person" "test" {
   first_name  = "АкцТестИзм"
@@ -49,6 +52,7 @@ resource "familio_person" "test" {
   birth       = { date = { year = 1850 } }
   death       = { date = { year = 1899 } }
   christening = { date = { year = 1851 } }
+  biography   = "Крестьянин села Нижняя Верея. Участник Первой мировой войны."
 }`,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -60,6 +64,7 @@ resource "familio_person" "test" {
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("death").AtMapKey("date").AtMapKey("year"), knownvalue.Int64Exact(1899)),
 					// christening edited in place (delete + recreate the baptism event).
 					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("christening").AtMapKey("date").AtMapKey("year"), knownvalue.Int64Exact(1851)),
+					statecheck.ExpectKnownValue("familio_person.test", tfjsonpath.New("biography"), knownvalue.StringExact("Крестьянин села Нижняя Верея. Участник Первой мировой войны.")),
 				},
 			},
 			{

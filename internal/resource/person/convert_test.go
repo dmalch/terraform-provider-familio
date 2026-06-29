@@ -23,6 +23,31 @@ func lifeBlk(date *familio.DateRange, place, comment string) types.Object {
 	return lifeEventBlockValue(date, place, comment)
 }
 
+func TestBiographyFromModel(t *testing.T) {
+	RegisterTestingT(t)
+
+	set := biographyFromModel(&ResourceModel{Biography: types.StringValue("Краткая справка")})
+	Expect(set).ToNot(BeNil())
+	Expect(*set).To(Equal("Краткая справка"))
+
+	// Null and empty both mean "no biography" → nil (sent as biography:null on
+	// create), so an omitted/empty attribute round-trips against a "" read-back.
+	Expect(biographyFromModel(&ResourceModel{Biography: types.StringNull()})).To(BeNil())
+	Expect(biographyFromModel(&ResourceModel{Biography: types.StringValue("")})).To(BeNil())
+}
+
+func TestBiographyChanged(t *testing.T) {
+	RegisterTestingT(t)
+
+	bio := func(s types.String) *ResourceModel { return &ResourceModel{Biography: s} }
+
+	Expect(biographyChanged(bio(types.StringValue("X")), bio(types.StringNull()))).To(BeTrue())
+	Expect(biographyChanged(bio(types.StringValue("X")), bio(types.StringValue("X")))).To(BeFalse())
+	Expect(biographyChanged(bio(types.StringNull()), bio(types.StringNull()))).To(BeFalse())
+	// "" and null are both "empty" → not a change.
+	Expect(biographyChanged(bio(types.StringValue("")), bio(types.StringNull()))).To(BeFalse())
+}
+
 func TestBasicFromModelDefaultsPrivacy(t *testing.T) {
 	RegisterTestingT(t)
 	m := &ResourceModel{

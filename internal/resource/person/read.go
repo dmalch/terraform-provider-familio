@@ -47,6 +47,15 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 	resp.Diagnostics.Append(applyEventsToState(ctx, events, &state)...)
 
+	// Biography is its own managed sub-resource; a failed read is a hard error so
+	// we never silently blank a real value and let the next apply overwrite it.
+	bio, err := r.client.GetPersonBiography(ctx, uuid)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading familio_person biography", err.Error())
+		return
+	}
+	state.Biography = types.StringValue(bio.Text)
+
 	// Refresh the sources block only when it is managed (non-null); an omitted
 	// block must stay null so the provider doesn't claim a person's sources.
 	if !state.Sources.IsNull() {
