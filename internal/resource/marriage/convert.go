@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/dmalch/terraform-provider-familio/internal/familio"
+	"github.com/dmalch/go-familio"
 )
 
 // partnerList extracts the partner uuids from the set, sorted so the first is a

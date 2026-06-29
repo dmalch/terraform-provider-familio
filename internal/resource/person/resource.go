@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 
+	"github.com/dmalch/go-familio"
 	"github.com/dmalch/terraform-provider-familio/internal/config"
-	"github.com/dmalch/terraform-provider-familio/internal/familio"
 )
 
 type Resource struct {

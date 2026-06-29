@@ -15,8 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/dmalch/go-familio"
 	"github.com/dmalch/terraform-provider-familio/internal/config"
-	"github.com/dmalch/terraform-provider-familio/internal/familio"
 )
 
 type Resource struct {

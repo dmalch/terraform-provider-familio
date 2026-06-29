@@ -1,3 +1,21 @@
+## 0.12.1
+
+MAINTENANCE:
+
+* **HTTP client extracted to a standalone module.** The reverse-engineered familio.org client,
+  previously vendored under `internal/familio/`, now lives in its own repo and Go module
+  [`github.com/dmalch/go-familio`](https://github.com/dmalch/go-familio) (pinned in `go.mod`), so
+  the same HTTP layer is reusable from CLIs and scripts. No user-facing behavior change: the
+  provider's schema, resources, and data sources are unchanged. The Terraform-specific bridges
+  (`internal/tfdate`, `internal/tfsource`, `internal/config`) stay in this repo.
+
+## 0.12.0
+
+BUG FIXES:
+
+* **`familio_source` decodes the catalog as an object `{key, hidden}`** rather than a plain string,
+  matching the familio.org API response shape.
+
 ## 0.11.0
 
 FEATURES:

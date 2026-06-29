@@ -9,9 +9,12 @@ exists; endpoints were reverse-engineered from the tree editor). Manages family-
 **persons**, **marriages**, and **life-fact events** as code. Built on the modern
 **terraform-plugin-framework** (not the legacy SDKv2).
 
-`internal/familio/API.md` is the source of truth for the familio.org HTTP surface — read
-it before touching anything in `internal/familio/`. It documents the reverse-engineered
-endpoints, request/response shapes, and the auth model.
+The HTTP client lives in a **separate module**,
+[`github.com/dmalch/go-familio`](https://github.com/dmalch/go-familio) (imported as package
+`familio`), pinned in `go.mod`. Its `API.md` is the source of truth for the familio.org HTTP
+surface — read it before touching client behaviour. It documents the reverse-engineered
+endpoints, request/response shapes, and the auth model. This repo holds only the
+Terraform-framework adapters over that client.
 
 ## Commands
 
@@ -46,8 +49,9 @@ are unset. Don't run them casually.
 - `Configure` resolves credentials, builds one `*familio.Client`, and hands it to every
   resource/datasource via `*config.ClientData` set on `resp.ResourceData`/`DataSourceData`.
   Each resource's `Configure` type-asserts `req.ProviderData` back to `*config.ClientData`.
-- `internal/familio/` — the **HTTP client** for familio.org's `/api/v2` surface. This is
-  the only package that talks to the network. Knows nothing about Terraform types.
+- `github.com/dmalch/go-familio` (external module, package `familio`) — the **HTTP client**
+  for familio.org's `/api/v2` surface. The only dependency that talks to the network. Knows
+  nothing about Terraform types. Extracted from this repo; bump its version in `go.mod`.
 - `internal/resource/{person,marriage,event}/` and `internal/datasource/settlementpersons/`
   — Terraform-framework adapters. They translate plan/state ↔ `familio` client calls.
 - `internal/tfdate/` — shared bridge between familio's complex-date model and the nested

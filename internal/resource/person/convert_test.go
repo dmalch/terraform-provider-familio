@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	. "github.com/onsi/gomega"
 
-	"github.com/dmalch/terraform-provider-familio/internal/familio"
+	"github.com/dmalch/go-familio"
 )
 
 // birthBlk builds a birth block object for test input (reusing the production

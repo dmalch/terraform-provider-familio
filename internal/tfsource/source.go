@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
-	"github.com/dmalch/terraform-provider-familio/internal/familio"
+	"github.com/dmalch/go-familio"
 )
 
 // Model is one source object. The first four fields are configuration (the
