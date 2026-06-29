@@ -118,6 +118,24 @@ func lifeEventFromEvents(events []familio.Event, typ string) types.Object {
 	return types.ObjectNull(lifeEventAttrTypes)
 }
 
+// biographyFromModel maps the optional biography attribute to the create
+// payload's *string. Null/empty both mean "no biography" → nil (sent as
+// biography:null), so an omitted or empty attribute round-trips against the
+// "" the read path normalises to null.
+func biographyFromModel(m *ResourceModel) *string {
+	v := strValue(m.Biography)
+	if v == "" {
+		return nil
+	}
+	return &v
+}
+
+// biographyChanged reports whether the biography text differs between plan and
+// state (treating null and "" alike), gating the in-place PUT /biography.
+func biographyChanged(plan, state *ResourceModel) bool {
+	return strValue(plan.Biography) != strValue(state.Biography)
+}
+
 // strValue returns an optional string attribute's value, or "" when null/unknown.
 func strValue(s types.String) string {
 	if s.IsNull() || s.IsUnknown() {

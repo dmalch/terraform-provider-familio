@@ -77,6 +77,13 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"christening": christeningBlock(),
 			"sources":     sourcesBlock(),
 
+			"biography": schema.StringAttribute{
+				Description:   "Free-text biography (the person's «tab=2» life description). Edited in place.",
+				Optional:      true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+
 			// Computed, populated from familio.
 			"display_name": schema.StringAttribute{Computed: true, Description: "Server-computed full display name."},
 			"created_at":   schema.StringAttribute{Computed: true, Description: "Creation timestamp."},

@@ -1,3 +1,13 @@
+## 0.13.0
+
+FEATURES:
+
+* **`familio_person` now manages the person's biography** — the free-text «tab=2» life
+  description — via a new optional `biography` attribute. It is set at create time and edited
+  **in place** (a `~ update`, never a replacement), backed by familio's `/biography`
+  sub-resource (`PUT` with its own `X-Base-Version` optimistic-lock token, distinct from
+  `/basic`). Requires `go-familio` v0.2.0.
+
 ## 0.12.1
 
 MAINTENANCE:

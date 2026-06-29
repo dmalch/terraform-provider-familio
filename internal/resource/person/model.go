@@ -19,6 +19,7 @@ type ResourceModel struct {
 	Birth          types.Object `tfsdk:"birth"`
 	Death          types.Object `tfsdk:"death"`
 	Christening    types.Object `tfsdk:"christening"`
+	Biography      types.String `tfsdk:"biography"`
 	Sources        types.List   `tfsdk:"sources"`
 	DisplayName    types.String `tfsdk:"display_name"`
 	CreatedAt      types.String `tfsdk:"created_at"`

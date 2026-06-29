@@ -6,6 +6,9 @@ resource "familio_person" "ivan" {
   gender     = "male"
   privacy    = "visible_for_all"
 
+  # Free-text life description (the person's «tab=2» biography); edited in place.
+  biography = "Крестьянин села Нижняя Верея. Участник Первой мировой войны."
+
   # Each life event is a block grouping its date, place (a familio settlement
   # UUID — «Место рождения») and a free-text comment.
   birth = {

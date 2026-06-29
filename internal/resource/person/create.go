@@ -23,8 +23,9 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 
 	created, err := r.client.CreatePerson(ctx, familio.CreatePersonInput{
-		Basic:  basicFromModel(&plan),
-		Events: events,
+		Basic:     basicFromModel(&plan),
+		Events:    events,
+		Biography: biographyFromModel(&plan),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Cannot create familio_person", err.Error())
@@ -34,6 +35,9 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	applyBasicToState(&created.Basic, &plan)
 	resp.Diagnostics.Append(applyEventsToState(ctx, created.Events, &plan)...)
 	plan.DisplayName = types.StringValue(created.Basic.DisplayName)
+	// biography is Computed: settle its known value (createResponse omits it, so
+	// reflect what we sent — empty when unset — matching the read-back).
+	plan.Biography = types.StringValue(strValue(plan.Biography))
 
 	// Sources are a separate sub-resource; attach them after the person exists.
 	if desired, managed, d := desiredSources(ctx, plan.Sources); managed {
