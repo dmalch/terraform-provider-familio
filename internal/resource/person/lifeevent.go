@@ -109,10 +109,12 @@ func christeningBlock() schema.SingleNestedAttribute {
 
 // blockPreserveDoc documents the preserve-on-omit contract shared by the three
 // life-event blocks (see issue #22 and read.go/update.go for the mechanism).
-const blockPreserveDoc = "Preserve-on-omit: omitting the whole block leaves the person's existing " +
+const blockPreserveDoc = "Preserve-on-omit: omitting the WHOLE block leaves the person's existing " +
 	"event untouched (it is treated as unmanaged, like the sources block), so importing a person " +
-	"and enriching it never clobbers events the config does not carry. Within a block you do declare, " +
-	"omitted fields are likewise preserved. To remove an event, delete it in the familio UI."
+	"and enriching it never clobbers events the config does not carry. Within a block you DO declare, " +
+	"an omitted comment/place/parents is preserved, but `date` is authoritative — omitting it clears " +
+	"the date, so include the date when managing a block (or omit the whole block to preserve " +
+	"everything). To remove an event entirely, delete it in the familio UI."
 
 // lifeEventAttributes builds the shared date/place/comment attributes. place and
 // comment are preserve-on-omit (Optional + Computed + UseStateForUnknown) so that
@@ -123,7 +125,9 @@ const blockPreserveDoc = "Preserve-on-omit: omitting the whole block leaves the 
 // Read/Update instead (an omitted block is left unmanaged).
 func lifeEventAttributes(dateDesc, placeDesc, commentDesc string) map[string]schema.Attribute {
 	return map[string]schema.Attribute{
-		"date": tfdate.Block(dateDesc, false),
+		"date": tfdate.Block(dateDesc+" Authoritative within a managed block: omitting the date "+
+			"while declaring the block clears it (omit the whole block to preserve the event). Leaving "+
+			"it unset is how you record a person whose parents are known but birth date is not.", false),
 		"place": schema.StringAttribute{
 			Description:   placeDesc + " Preserve-on-omit within a managed block.",
 			Optional:      true,
