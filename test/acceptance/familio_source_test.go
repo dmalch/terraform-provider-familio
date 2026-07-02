@@ -84,6 +84,9 @@ resource "familio_source" "catalog" {
 				ResourceName:      "familio_source.archive",
 				ImportState:       true,
 				ImportStateVerify: true,
+				// The source has a composite identity (person + reference_uuid) and no
+				// "id" attribute, so tell the verifier which attribute identifies it.
+				ImportStateVerifyIdentifierAttribute: "reference_uuid",
 				// Composite ID: "<person_uuid>:<reference_uuid>".
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r := s.RootModule().Resources["familio_source.archive"]

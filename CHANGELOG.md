@@ -1,3 +1,13 @@
+## 0.14.1
+
+BUG FIXES:
+
+* **Source comments work again.** Creating or editing a `familio_source` (or a `sources` entry
+  on `familio_person`) with a `comment` failed against the live API with HTTP 409 «Не указана
+  дата-время последнего обновления источника». familio now guards the source comment edit with
+  the `X-Base-Version` optimistic-lock header; the fix ships in `go-familio` v0.3.1
+  (`UpdateSourceComment` sends the source's `updatedAt`). Bumped `go-familio` to v0.3.1.
+
 ## 0.14.0
 
 FEATURES:
