@@ -16,6 +16,13 @@ FEATURES:
   (Importing `familio_marriage` was already supported; the union uuid was just not discoverable
   declaratively before.) Backed by `go-familio` v0.3.0's `DeriveRelations`.
 
+ENHANCEMENTS:
+
+* The provider's `browser` credential option now falls back to the **`FAMILIO_BROWSER`** env
+  var, matching how `cookie`/`session_token` fall back to `FAMILIO_COOKIES`/`FAMILIO_SESSION`.
+  This lets `FAMILIO_BROWSER=chrome make testacc` (and scripted runs) use the built-in
+  browser-cookie extraction with no HCL. (macOS may require Full Disk Access.)
+
 MAINTENANCE:
 
 * Bumped `go-familio` to v0.3.0.

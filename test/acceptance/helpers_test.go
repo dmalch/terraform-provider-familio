@@ -22,22 +22,33 @@ var testProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, 
 }
 
 // testAccPreCheck skips acceptance tests unless familio credentials are present.
+// It honours the same three credential sources the provider does — a cookie
+// header, a session token, or a browser to extract from — so a run can lean on
+// the provider's built-in browser-cookie capability with FAMILIO_BROWSER=chrome.
 // resource.Test additionally requires TF_ACC=1 to run at all.
 func testAccPreCheck(t *testing.T) {
-	if os.Getenv("FAMILIO_COOKIES") == "" && os.Getenv("FAMILIO_SESSION") == "" {
-		t.Skip("set FAMILIO_COOKIES (or FAMILIO_SESSION) to run familio acceptance tests")
+	if os.Getenv("FAMILIO_COOKIES") == "" && os.Getenv("FAMILIO_SESSION") == "" && os.Getenv("FAMILIO_BROWSER") == "" {
+		t.Skip("set FAMILIO_COOKIES, FAMILIO_SESSION or FAMILIO_BROWSER to run familio acceptance tests")
 	}
 }
 
 // newTestClient builds a familio client from the same env credentials the
-// provider uses, for out-of-band CheckDestroy assertions.
+// provider uses (cookie header > session token > browser), for out-of-band
+// CheckDestroy assertions.
 func newTestClient(t *testing.T) *familio.Client {
 	t.Helper()
 	var opts familio.Options
-	if header := os.Getenv("FAMILIO_COOKIES"); header != "" {
-		opts.Cookies = familio.CookiesFromHeader(header)
-	} else if tok := os.Getenv("FAMILIO_SESSION"); tok != "" {
-		opts.Cookies = familio.CookieFromSessionToken(tok)
+	switch {
+	case os.Getenv("FAMILIO_COOKIES") != "":
+		opts.Cookies = familio.CookiesFromHeader(os.Getenv("FAMILIO_COOKIES"))
+	case os.Getenv("FAMILIO_SESSION") != "":
+		opts.Cookies = familio.CookieFromSessionToken(os.Getenv("FAMILIO_SESSION"))
+	case os.Getenv("FAMILIO_BROWSER") != "":
+		cookies, err := familio.CookiesFromBrowser(os.Getenv("FAMILIO_BROWSER"))
+		if err != nil {
+			t.Fatalf("extracting familio cookies from browser %q: %v", os.Getenv("FAMILIO_BROWSER"), err)
+		}
+		opts.Cookies = cookies
 	}
 	c, err := familio.NewClient(opts)
 	if err != nil {
