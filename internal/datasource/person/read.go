@@ -48,16 +48,26 @@ func (d *DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp 
 	data.DeathDate = firstFormattedOfType(events, familio.EventDeath)
 	data.ChristeningDate = firstFormattedOfType(events, familio.EventBaptism)
 
-	var parents []string
-	if birth := familio.OwnBirthEvent(events, uuid); birth != nil {
-		parents = birth.ParentUUIDs()
+	// Normalize the person's kinship once; spouses carry the marriage (wedding
+	// event) uuid, which is what makes a familio_marriage importable.
+	rel := familio.DeriveRelations(events, uuid)
+	resp.Diagnostics.Append(setStrings(ctx, &data.Parents, refUUIDs(rel.Parents))...)
+	resp.Diagnostics.Append(setStrings(ctx, &data.Spouses, spouseUUIDs(rel.Spouses))...)
+	resp.Diagnostics.Append(setStrings(ctx, &data.Children, refUUIDs(rel.Children))...)
+
+	marriages := make([]MarriageModel, 0, len(rel.Spouses))
+	for _, s := range rel.Spouses {
+		marriages = append(marriages, MarriageModel{
+			SpouseUUID:   types.StringValue(s.UUID),
+			MarriageUUID: stringOrNull(s.MarriageUUID),
+		})
 	}
-	resp.Diagnostics.Append(setStrings(ctx, &data.Parents, parents)...)
-	resp.Diagnostics.Append(setStrings(ctx, &data.Spouses, familio.SpousesOf(events, uuid))...)
-	resp.Diagnostics.Append(setStrings(ctx, &data.Children, familio.ChildrenOf(events, uuid))...)
+	list, diags := types.ListValueFrom(ctx, marriageObjectType(), marriages)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	data.Marriages = list
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -79,6 +89,24 @@ func firstFormattedOfType(events []familio.Event, typ string) types.String {
 		}
 	}
 	return types.StringNull()
+}
+
+// refUUIDs projects a PersonRef slice down to its uuids.
+func refUUIDs(refs []familio.PersonRef) []string {
+	ids := make([]string, 0, len(refs))
+	for _, r := range refs {
+		ids = append(ids, r.UUID)
+	}
+	return ids
+}
+
+// spouseUUIDs projects a Spouse slice down to its person uuids.
+func spouseUUIDs(spouses []familio.Spouse) []string {
+	ids := make([]string, 0, len(spouses))
+	for _, s := range spouses {
+		ids = append(ids, s.UUID)
+	}
+	return ids
 }
 
 func setStrings(ctx context.Context, dst *types.Set, values []string) diag.Diagnostics {

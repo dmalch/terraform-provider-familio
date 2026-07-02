@@ -1,3 +1,51 @@
+## 0.14.0
+
+FEATURES:
+
+* **New `familio_tree` data source (#24).** Breadth-first crawls the persons connected to a
+  root person and returns each with normalized relations — `parents`, `spouses`, `children` —
+  in the terraform graph, replacing the out-of-band BFS crawl every tree onboarding needed to
+  harvest the UUIDs to import against. Bound the walk with `direction` (up / down / component),
+  `surname` (keep married-in branches out), and `depth`. Each spouse carries `marriage_uuid`,
+  so the crawl also yields ready-made `familio_marriage` import ids. Backed by `go-familio`
+  v0.3.0's `CrawlTree`.
+* **`familio_person` data source now exposes `marriages` (#23, #24).** A list of the person's
+  unions — `{ spouse_uuid, marriage_uuid }` — where `marriage_uuid` is the underlying wedding
+  event's uuid. This makes an existing union discoverable from terraform: pair it with the
+  person's uuid to `terraform import` a `familio_marriage` (`"<person_uuid>:<marriage_uuid>"`).
+  (Importing `familio_marriage` was already supported; the union uuid was just not discoverable
+  declaratively before.) Backed by `go-familio` v0.3.0's `DeriveRelations`.
+
+ENHANCEMENTS:
+
+* The provider's `browser` credential option now falls back to the **`FAMILIO_BROWSER`** env
+  var, matching how `cookie`/`session_token` fall back to `FAMILIO_COOKIES`/`FAMILIO_SESSION`.
+  This lets `FAMILIO_BROWSER=chrome make testacc` (and scripted runs) use the built-in
+  browser-cookie extraction with no HCL. (macOS may require Full Disk Access.)
+
+MAINTENANCE:
+
+* Bumped `go-familio` to v0.3.0.
+
+BUG FIXES:
+
+* **`familio_person` life events are now preserve-on-omit (#22).** Importing a person to enrich
+  it no longer clobbers curated data the config does not carry. Two levels of preservation:
+  * **Whole block** — omitting the `birth`, `death` or `christening` block leaves that event
+    **unmanaged and untouched** on familio (same contract as the `sources` block): the provider
+    neither reads it into state nor overwrites it. Declaring the block opts back in to managing
+    it. (As a result, `terraform import` brings life-event blocks in as unmanaged/null — you
+    declare the ones you want to manage.)
+  * **Within a managed block** — an omitted `comment`, `place` or `parents` is **preserved by
+    merging from the person's current event**, so setting a birth `date` no longer strips its
+    comment or parent links. These fields are `Optional + Computed` (`UseStateForUnknown`);
+    clear them explicitly with `""` / `[]`. `date` is authoritative within a managed block
+    (declare it when you manage the block).
+
+  To remove an event entirely, delete it in the familio UI. (A `Computed` nested-object
+  attribute triggers a perpetual "known after apply" plan in terraform-plugin-framework, so
+  whole-block/date preservation is handled in the resource's Read/Update rather than the schema.)
+
 ## 0.13.0
 
 FEATURES:

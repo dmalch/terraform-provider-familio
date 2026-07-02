@@ -16,6 +16,7 @@ import (
 	dsperson "github.com/dmalch/terraform-provider-familio/internal/datasource/person"
 	dssettlement "github.com/dmalch/terraform-provider-familio/internal/datasource/settlement"
 	dssettlementpersons "github.com/dmalch/terraform-provider-familio/internal/datasource/settlementpersons"
+	dstree "github.com/dmalch/terraform-provider-familio/internal/datasource/tree"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/event"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/marriage"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/person"
@@ -25,6 +26,7 @@ import (
 const (
 	envCookies = "FAMILIO_COOKIES"
 	envSession = "FAMILIO_SESSION"
+	envBrowser = "FAMILIO_BROWSER"
 )
 
 // FamilioProvider is the provider implementation.
@@ -65,7 +67,8 @@ func (p *FamilioProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 			"browser": schema.StringAttribute{
 				Description: "Extract the familio.org session cookie from a logged-in browser " +
 					"instead of supplying it directly. One of: chrome, edge, brave, arc, " +
-					"chromium, vivaldi, opera, firefox, safari.",
+					"chromium, vivaldi, opera, firefox, safari. Falls back to the FAMILIO_BROWSER " +
+					"env var. (macOS may require Full Disk Access for the browser's cookie store.)",
 				Optional: true,
 			},
 		},
@@ -117,7 +120,7 @@ func resolveCookies(cfg config.FamilioProviderConfig) ([]*http.Cookie, error) {
 	if token := firstNonEmpty(cfg.SessionToken.ValueString(), os.Getenv(envSession)); token != "" {
 		return familio.CookieFromSessionToken(token), nil
 	}
-	if browser := strings.TrimSpace(cfg.Browser.ValueString()); browser != "" {
+	if browser := firstNonEmpty(cfg.Browser.ValueString(), os.Getenv(envBrowser)); browser != "" {
 		return familio.CookiesFromBrowser(browser)
 	}
 	return nil, nil
@@ -146,5 +149,6 @@ func (p *FamilioProvider) DataSources(_ context.Context) []func() datasource.Dat
 		dssettlementpersons.NewDataSource,
 		dsperson.NewDataSource,
 		dssettlement.NewDataSource,
+		dstree.NewDataSource,
 	}
 }

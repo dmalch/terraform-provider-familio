@@ -23,4 +23,12 @@ type Model struct {
 	Parents         types.Set    `tfsdk:"parents"`
 	Spouses         types.Set    `tfsdk:"spouses"`
 	Children        types.Set    `tfsdk:"children"`
+	Marriages       types.List   `tfsdk:"marriages"`
+}
+
+// MarriageModel is one union of this person: the spouse and the wedding-event
+// uuid that identifies the marriage (the id to import a familio_marriage with).
+type MarriageModel struct {
+	SpouseUUID   types.String `tfsdk:"spouse_uuid"`
+	MarriageUUID types.String `tfsdk:"marriage_uuid"`
 }

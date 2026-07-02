@@ -45,6 +45,6 @@ resource "familio_person" "example" {
 
 ### Optional
 
-- `browser` (String) Extract the familio.org session cookie from a logged-in browser instead of supplying it directly. One of: chrome, edge, brave, arc, chromium, vivaldi, opera, firefox, safari.
+- `browser` (String) Extract the familio.org session cookie from a logged-in browser instead of supplying it directly. One of: chrome, edge, brave, arc, chromium, vivaldi, opera, firefox, safari. Falls back to the FAMILIO_BROWSER env var. (macOS may require Full Disk Access for the browser's cookie store.)
 - `cookie` (String, Sensitive) Raw Cookie header containing the familio.org `t` session cookie (e.g. "t=...; ..."). Falls back to the FAMILIO_COOKIES env var.
 - `session_token` (String, Sensitive) Bare familio.org `t` session token; the provider wraps it as a `t=<value>` cookie. Falls back to the FAMILIO_SESSION env var.

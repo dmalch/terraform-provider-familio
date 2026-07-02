@@ -3,6 +3,7 @@ package acceptance
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -49,6 +50,9 @@ resource "familio_marriage" "m" {
 
 data "familio_person" "dad" {
   uuid = familio_person.dad.uuid
+  # The child's birth event and the marriage's wedding event are what make dad's
+  # /events show a child and a spouse; without this the data read can race them.
+  depends_on = [familio_person.child, familio_marriage.m]
 }`,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("data.familio_person.dad", tfjsonpath.New("owner_id"), knownvalue.NotNull()),
@@ -56,6 +60,14 @@ data "familio_person" "dad" {
 					statecheck.ExpectKnownValue("data.familio_person.dad", tfjsonpath.New("children"), knownvalue.SetSizeExact(1)),
 					statecheck.ExpectKnownValue("data.familio_person.dad", tfjsonpath.New("spouses"), knownvalue.SetSizeExact(1)),
 					statecheck.ExpectKnownValue("data.familio_person.dad", tfjsonpath.New("parents"), knownvalue.SetSizeExact(0)),
+					// #23: the union is discoverable — one marriage, whose marriage_uuid
+					// is the wedding-event uuid managed by familio_marriage.m.
+					statecheck.ExpectKnownValue("data.familio_person.dad", tfjsonpath.New("marriages"), knownvalue.ListSizeExact(1)),
+					statecheck.CompareValuePairs(
+						"familio_marriage.m", tfjsonpath.New("uuid"),
+						"data.familio_person.dad", tfjsonpath.New("marriages").AtSliceIndex(0).AtMapKey("marriage_uuid"),
+						compare.ValuesSame(),
+					),
 				},
 			},
 		},

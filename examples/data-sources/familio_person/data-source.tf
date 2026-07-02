@@ -12,3 +12,12 @@ output "ancestor_parents" {
 output "is_mine" {
   value = data.familio_person.ancestor.owner_id == "894dc7d5"
 }
+
+# familio_marriage import ids for this person's unions
+# ("<person_uuid>:<marriage_uuid>").
+output "marriage_import_ids" {
+  value = [
+    for m in data.familio_person.ancestor.marriages :
+    "${data.familio_person.ancestor.uuid}:${m.marriage_uuid}"
+  ]
+}
