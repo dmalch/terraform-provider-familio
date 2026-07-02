@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -64,74 +63,75 @@ func birthBlock() schema.SingleNestedAttribute {
 		Description: "UUIDs of this person's parents (0–2). familio stores them as gender-agnostic " +
 			"participants on this person's birth event, so order does not matter and a parent's " +
 			"father/mother role is inferred from their own gender. Each parent must already exist. " +
-			"Omitting it preserves the current parents (set to [] to clear them).",
+			"Preserve-on-omit: within a managed birth block, omitting this keeps the current parents " +
+			"(set to [] to clear them).",
 		Optional:      true,
 		Computed:      true,
 		ElementType:   types.StringType,
 		PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 		Validators:    []validator.Set{setvalidator.SizeBetween(0, 2)},
 	}
-	return preserveBlock(
-		"Birth event — date, place, comment and the person's parents. Edited in place.",
-		attrs,
-	)
+	return schema.SingleNestedAttribute{
+		Description: "Birth event — date, place, comment and the person's parents. Edited in place. " +
+			blockPreserveDoc,
+		Optional:   true,
+		Attributes: attrs,
+	}
 }
 
 // deathBlock is the schema for the death event: date, place, comment.
 func deathBlock() schema.SingleNestedAttribute {
-	return preserveBlock(
-		"Death event — date, place (familio's «Место смерти»), comment. Edited in place.",
-		lifeEventAttributes(
+	return schema.SingleNestedAttribute{
+		Description: "Death event — date, place (familio's «Место смерти»), comment. Edited in place. " +
+			blockPreserveDoc,
+		Optional: true,
+		Attributes: lifeEventAttributes(
 			"Death date.",
 			"Death place — a familio settlement UUID.",
 			"Free-text comment on the death event.",
 		),
-	)
+	}
 }
 
 // christeningBlock is the schema for the christening («Крещение») event.
 func christeningBlock() schema.SingleNestedAttribute {
-	return preserveBlock(
-		"Christening (baptism) event — familio's «Крещение»: date, place, comment.",
-		lifeEventAttributes(
+	return schema.SingleNestedAttribute{
+		Description: "Christening (baptism) event — familio's «Крещение»: date, place, comment. " +
+			blockPreserveDoc,
+		Optional: true,
+		Attributes: lifeEventAttributes(
 			"Christening date.",
 			"Christening place — a familio settlement UUID.",
 			"Free-text comment on the christening event.",
 		),
-	)
-}
-
-// preserveBlock wraps a life-event attribute map in a preserve-on-omit nested
-// block (Optional + Computed + UseStateForUnknown): omitting the block in config
-// keeps the person's existing event instead of deleting it, matching biography.
-// This is what makes "import an existing person, then enrich it" safe — a config
-// that does not carry an event no longer clobbers it (issue #22). To change an
-// event, set it; to clear a facet, set that field explicitly ([] for parents).
-func preserveBlock(desc string, attrs map[string]schema.Attribute) schema.SingleNestedAttribute {
-	return schema.SingleNestedAttribute{
-		Description:   desc + " Omitting the whole block preserves the current event.",
-		Optional:      true,
-		Computed:      true,
-		PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
-		Attributes:    attrs,
 	}
 }
 
+// blockPreserveDoc documents the preserve-on-omit contract shared by the three
+// life-event blocks (see issue #22 and read.go/update.go for the mechanism).
+const blockPreserveDoc = "Preserve-on-omit: omitting the whole block leaves the person's existing " +
+	"event untouched (it is treated as unmanaged, like the sources block), so importing a person " +
+	"and enriching it never clobbers events the config does not carry. Within a block you do declare, " +
+	"omitted fields are likewise preserved. To remove an event, delete it in the familio UI."
+
 // lifeEventAttributes builds the shared date/place/comment attributes. place and
 // comment are preserve-on-omit (Optional + Computed + UseStateForUnknown) so that
-// setting one facet of an event does not null the others — e.g. updating a date
-// keeps that event's comment (issue #22).
+// setting one facet of a managed event does not null the others — e.g. updating a
+// date keeps that event's comment (issue #22). date stays plain Optional: a
+// Computed nested-object attribute triggers a perpetual "known after apply" plan
+// in terraform-plugin-framework, so whole-block/date preservation is handled in
+// Read/Update instead (an omitted block is left unmanaged).
 func lifeEventAttributes(dateDesc, placeDesc, commentDesc string) map[string]schema.Attribute {
 	return map[string]schema.Attribute{
-		"date": tfdate.BlockPreserve(dateDesc),
+		"date": tfdate.Block(dateDesc, false),
 		"place": schema.StringAttribute{
-			Description:   placeDesc + " Omitting it preserves the current value.",
+			Description:   placeDesc + " Preserve-on-omit within a managed block.",
 			Optional:      true,
 			Computed:      true,
 			PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
 		"comment": schema.StringAttribute{
-			Description:   commentDesc + " Omitting it preserves the current value.",
+			Description:   commentDesc + " Preserve-on-omit within a managed block.",
 			Optional:      true,
 			Computed:      true,
 			PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -172,9 +172,90 @@ func lifeEventParts(ctx context.Context, block types.Object) (date *familio.Date
 	return date, strValue(e.Place), strValue(e.Comment), diags
 }
 
+// birthPartsMerged is birthParts for the Update write path: within a managed
+// birth block, an omitted comment/place/parents (unknown — e.g. right after
+// import, before UseStateForUnknown has a prior state to reuse) is filled from
+// the person's CURRENT birth event rather than cleared, so setting a birth date
+// never strips the existing comment or parents (issue #22). date is authoritative
+// (taken from the block): managing a birth means declaring its date.
+func birthPartsMerged(ctx context.Context, block types.Object, server *familio.Event) (date *familio.DateRange, place, comment string, parents []string, diags diag.Diagnostics) {
+	var b birthModel
+	diags.Append(block.As(ctx, &b, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
+		return nil, "", "", nil, diags
+	}
+	date, d := tfdate.RangeFromObject(ctx, b.Date)
+	diags.Append(d...)
+	parents, dp := mergeParents(ctx, b.Parents, serverParents(server))
+	diags.Append(dp...)
+	return date, mergeString(b.Place, serverPlace(server)), mergeString(b.Comment, serverComment(server)), parents, diags
+}
+
+// lifeEventPartsMerged is lifeEventParts with the same server-fallback merge for
+// a death/christening block's place and comment.
+func lifeEventPartsMerged(ctx context.Context, block types.Object, server *familio.Event) (date *familio.DateRange, place, comment string, diags diag.Diagnostics) {
+	var e lifeEventModel
+	diags.Append(block.As(ctx, &e, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
+		return nil, "", "", diags
+	}
+	date, d := tfdate.RangeFromObject(ctx, e.Date)
+	diags.Append(d...)
+	return date, mergeString(e.Place, serverPlace(server)), mergeString(e.Comment, serverComment(server)), diags
+}
+
+// mergeString returns the planned string when the config set it (known — an
+// explicit "" clears the field), else the server's current value (preserve).
+func mergeString(planned types.String, server string) string {
+	if planned.IsUnknown() || planned.IsNull() {
+		return server
+	}
+	return planned.ValueString()
+}
+
+// mergeParents returns the planned parents when the config set them (known — an
+// explicit [] clears them), else the server's current parents (preserve).
+func mergeParents(ctx context.Context, planned types.Set, server []string) ([]string, diag.Diagnostics) {
+	if planned.IsUnknown() || planned.IsNull() {
+		return server, nil
+	}
+	return parentList(ctx, planned)
+}
+
+func serverComment(ev *familio.Event) string {
+	if ev == nil {
+		return ""
+	}
+	return ev.Comment
+}
+
+func serverPlace(ev *familio.Event) string {
+	if ev == nil {
+		return ""
+	}
+	return ev.SettlementUUID()
+}
+
+func serverParents(ev *familio.Event) []string {
+	if ev == nil {
+		return nil
+	}
+	return ev.ParentUUIDs()
+}
+
 // hasInfo reports whether a life event carries anything worth recording.
 func hasInfo(date *familio.DateRange, place, comment string) bool {
 	return date != nil || place != "" || comment != ""
+}
+
+// firstEventOfType returns the first event of the given type, or nil.
+func firstEventOfType(events []familio.Event, typ string) *familio.Event {
+	for i := range events {
+		if events[i].Type == typ {
+			return &events[i]
+		}
+	}
+	return nil
 }
 
 // birthBlockValue builds the birth block from a read-back event, or null when it

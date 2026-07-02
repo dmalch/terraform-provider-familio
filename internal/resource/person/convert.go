@@ -27,26 +27,33 @@ func basicFromModel(m *ResourceModel) familio.BasicFields {
 	}
 }
 
-// eventsFromModel assembles the create events from the life-event blocks: the
-// mandatory birth event (date + place + comment + parents) plus a death and/or
-// christening event when their block carries any information.
+// eventsFromModel assembles the create events from the life-event blocks. Each
+// block is only emitted when the config declares it (non-null): an omitted block
+// is unmanaged and left off the create so it can be preserved/adopted later,
+// mirroring how the sources block treats a null value (issue #22).
 func eventsFromModel(ctx context.Context, m *ResourceModel) ([]familio.Event, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	// familio requires a birth event on every person, so it is always emitted
+	// (empty when the block is omitted).
 	bdate, bplace, bcomment, parents, d := birthParts(ctx, m.Birth)
 	diags.Append(d...)
 	events := []familio.Event{familio.BirthEvent(bdate, familio.SelfRef, parents, bplace, bcomment)}
 
-	ddate, dplace, dcomment, dd := lifeEventParts(ctx, m.Death)
-	diags.Append(dd...)
-	if hasInfo(ddate, dplace, dcomment) {
-		events = append(events, familio.SelfDeathEvent(ddate, dplace, dcomment))
+	if !m.Death.IsNull() {
+		ddate, dplace, dcomment, dd := lifeEventParts(ctx, m.Death)
+		diags.Append(dd...)
+		if hasInfo(ddate, dplace, dcomment) {
+			events = append(events, familio.SelfDeathEvent(ddate, dplace, dcomment))
+		}
 	}
 
-	cdate, cplace, ccomment, cc := lifeEventParts(ctx, m.Christening)
-	diags.Append(cc...)
-	if hasInfo(cdate, cplace, ccomment) {
-		events = append(events, familio.SelfBaptismEvent(cdate, cplace, ccomment))
+	if !m.Christening.IsNull() {
+		cdate, cplace, ccomment, cc := lifeEventParts(ctx, m.Christening)
+		diags.Append(cc...)
+		if hasInfo(cdate, cplace, ccomment) {
+			events = append(events, familio.SelfBaptismEvent(cdate, cplace, ccomment))
+		}
 	}
 	return events, diags
 }
@@ -78,28 +85,37 @@ func applyBasicToState(rec *familio.BasicRecord, m *ResourceModel) {
 	m.UpdatedAt = types.StringValue(rec.UpdatedAt)
 }
 
-// applyEventsToState sets the birth/death/christening blocks from a read-back
-// events slice. The birth block is read from the person's OWN birth event (the
-// one where they are the child — a parent's /events also lists their children's
-// births, where they hold role parent).
+// applyEventsToState refreshes the birth/death/christening blocks from a read-back
+// events slice — but ONLY for blocks the model already manages (non-null). An
+// omitted (null) block is unmanaged: it is left null so the provider neither
+// claims nor clobbers an event the config does not carry, exactly like the
+// sources block (issue #22). The birth block is read from the person's OWN birth
+// event (the one where they are the child — a parent's /events also lists their
+// children's births, where they hold role parent).
 func applyEventsToState(ctx context.Context, events []familio.Event, m *ResourceModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	var bdate *familio.DateRange
-	var bplace, bcomment string
-	var parents []string
-	if birth := familio.OwnBirthEvent(events, m.UUID.ValueString()); birth != nil {
-		bdate = familio.RangeFromEventDate(birth.Date)
-		bplace = birth.SettlementUUID()
-		bcomment = birth.Comment
-		parents = birth.ParentUUIDs()
+	if !m.Birth.IsNull() {
+		var bdate *familio.DateRange
+		var bplace, bcomment string
+		var parents []string
+		if birth := familio.OwnBirthEvent(events, m.UUID.ValueString()); birth != nil {
+			bdate = familio.RangeFromEventDate(birth.Date)
+			bplace = birth.SettlementUUID()
+			bcomment = birth.Comment
+			parents = birth.ParentUUIDs()
+		}
+		birthObj, d := birthBlockValue(ctx, bdate, bplace, bcomment, parents)
+		diags.Append(d...)
+		m.Birth = birthObj
 	}
-	birthObj, d := birthBlockValue(ctx, bdate, bplace, bcomment, parents)
-	diags.Append(d...)
-	m.Birth = birthObj
 
-	m.Death = lifeEventFromEvents(events, familio.EventDeath)
-	m.Christening = lifeEventFromEvents(events, familio.EventBaptism)
+	if !m.Death.IsNull() {
+		m.Death = lifeEventFromEvents(events, familio.EventDeath)
+	}
+	if !m.Christening.IsNull() {
+		m.Christening = lifeEventFromEvents(events, familio.EventBaptism)
+	}
 	return diags
 }
 

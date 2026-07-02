@@ -72,6 +72,10 @@ resource "familio_person" "test" {
 				ImportState:                          true,
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: "uuid",
+				// Life-event blocks are preserve-on-omit (#22): import brings them in
+				// as unmanaged (null) — you opt in by declaring them, like sources — so
+				// they are not expected to round-trip through import.
+				ImportStateVerifyIgnore: []string{"birth", "death", "christening"},
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					return s.RootModule().Resources["familio_person.test"].Primary.Attributes["uuid"], nil
 				},
@@ -121,10 +125,12 @@ resource "familio_person" "keep" {
 				},
 			},
 			{
-				// Config now carries ONLY the birth date — every other facet and the
-				// whole death/christening blocks are omitted. Pre-#22 this nulled the
-				// birth comment/parents and deleted death & christening. Now they are
-				// preserved, so this is at most an in-place update of the birth date.
+				// Config now carries ONLY the birth date — the birth comment/parents
+				// are omitted, and the whole death/christening blocks are dropped.
+				// Pre-#22 this nulled the birth comment/parents and deleted death &
+				// christening. Now: birth date updates in place, its omitted facets are
+				// preserved (merged), and the omitted blocks become unmanaged but are
+				// left intact on familio (verified via the data source).
 				Config: parent + `
 resource "familio_person" "keep" {
   first_name = "АкцТест"
@@ -132,15 +138,23 @@ resource "familio_person" "keep" {
   gender     = "male"
   privacy    = "invisible"
   birth      = { date = { year = 1871 } }
+}
+
+data "familio_person" "keep" {
+  uuid       = familio_person.keep.uuid
+  depends_on = [familio_person.keep]
 }`,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("birth").AtMapKey("date").AtMapKey("year"), knownvalue.Int64Exact(1871)),
-					// Omitted facets preserved.
+					// Omitted facets within the managed birth block are preserved.
 					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("birth").AtMapKey("comment"), knownvalue.StringExact("Родился в деревне.")),
 					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("birth").AtMapKey("parents"), knownvalue.SetSizeExact(1)),
-					// Omitted whole blocks preserved.
-					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("death").AtMapKey("comment"), knownvalue.StringExact("Умер дома.")),
-					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("christening").AtMapKey("date").AtMapKey("month"), knownvalue.Int64Exact(5)),
+					// Omitted whole blocks are unmanaged (null in state)…
+					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("death"), knownvalue.Null()),
+					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("christening"), knownvalue.Null()),
+					// …but preserved on familio (the data source reads the live events).
+					statecheck.ExpectKnownValue("data.familio_person.keep", tfjsonpath.New("death_date"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("data.familio_person.keep", tfjsonpath.New("christening_date"), knownvalue.NotNull()),
 				},
 			},
 		},
@@ -313,14 +327,17 @@ resource "familio_person" "child" {
 				},
 			},
 			{
-				// Regression for #4: dad is a parent, so dad's /events also lists the
-				// child's birth event. Importing dad must read back dad's OWN birth
-				// year (1860), not the child's (1881); ImportStateVerify fails if
-				// birth is dropped to null or read from the wrong event.
+				// Import dad and confirm the core person round-trips. Life-event blocks
+				// are preserve-on-omit (#22), so import brings them in as unmanaged
+				// (null) and they are ignored here. The #4 regression itself — that
+				// dad's OWN birth (1860) is read, not the child's (1881) that also
+				// appears on dad's /events — is covered by the TestApplyEventsToState
+				// unit test ("reads the birth block from the person's OWN birth event").
 				ResourceName:                         "familio_person.dad",
 				ImportState:                          true,
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: "uuid",
+				ImportStateVerifyIgnore:              []string{"birth", "death", "christening"},
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					return s.RootModule().Resources["familio_person.dad"].Primary.Attributes["uuid"], nil
 				},

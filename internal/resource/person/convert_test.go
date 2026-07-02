@@ -166,7 +166,8 @@ func TestApplyEventsToState(t *testing.T) {
 			familio.BirthEvent(&familio.DateRange{Year: 1889}, personUUID, []string{"uuid-dad", "uuid-mom"}, "sett-own", "own note"),
 			familio.DeathEvent(&familio.DateRange{Year: 1950}, personUUID, "sett-death", ""),
 		}
-		m := &ResourceModel{UUID: types.StringValue(personUUID)}
+		// birth is managed (non-null), so applyEventsToState refreshes it.
+		m := &ResourceModel{UUID: types.StringValue(personUUID), Birth: birthBlk(t, &familio.DateRange{Year: 1}, "", "", nil)}
 
 		Expect(applyEventsToState(t.Context(), events, m)).To(BeEmpty())
 
@@ -178,13 +179,18 @@ func TestApplyEventsToState(t *testing.T) {
 		Expect(parents).To(ConsistOf("uuid-dad", "uuid-mom"))
 	})
 
-	t.Run("reads the death block and leaves an absent christening block null", func(t *testing.T) {
+	t.Run("refreshes a managed death block and leaves an absent christening block null", func(t *testing.T) {
 		RegisterTestingT(t)
 		events := []familio.Event{
 			familio.BirthEvent(&familio.DateRange{Year: 1889}, personUUID, nil, "", ""),
 			familio.DeathEvent(&familio.DateRange{Year: 1950}, personUUID, "sett-death", ""),
 		}
-		m := &ResourceModel{UUID: types.StringValue(personUUID)}
+		// death managed, birth managed; christening omitted (null → unmanaged).
+		m := &ResourceModel{
+			UUID:  types.StringValue(personUUID),
+			Birth: birthBlk(t, &familio.DateRange{Year: 1}, "", "", nil),
+			Death: lifeBlk(&familio.DateRange{Year: 1}, "", ""),
+		}
 
 		Expect(applyEventsToState(t.Context(), events, m)).To(BeEmpty())
 
@@ -194,10 +200,26 @@ func TestApplyEventsToState(t *testing.T) {
 		Expect(m.Christening.IsNull()).To(BeTrue())
 	})
 
-	t.Run("a no-information birth event reads back as a null block (matches an omitted block)", func(t *testing.T) {
+	t.Run("an omitted (null) block is left unmanaged — not populated from the server", func(t *testing.T) {
+		RegisterTestingT(t)
+		// The person HAS a death event, but the model's death block is null
+		// (unmanaged): applyEventsToState must leave it null (preserve-on-omit).
+		events := []familio.Event{
+			familio.BirthEvent(&familio.DateRange{Year: 1889}, personUUID, nil, "", ""),
+			familio.DeathEvent(&familio.DateRange{Year: 1950}, personUUID, "sett-death", ""),
+		}
+		m := &ResourceModel{UUID: types.StringValue(personUUID)} // all blocks null
+
+		Expect(applyEventsToState(t.Context(), events, m)).To(BeEmpty())
+		Expect(m.Birth.IsNull()).To(BeTrue())
+		Expect(m.Death.IsNull()).To(BeTrue())
+		Expect(m.Christening.IsNull()).To(BeTrue())
+	})
+
+	t.Run("a managed birth with no server info reads back as a null block", func(t *testing.T) {
 		RegisterTestingT(t)
 		events := []familio.Event{familio.BirthEvent(nil, personUUID, nil, "", "")}
-		m := &ResourceModel{UUID: types.StringValue(personUUID)}
+		m := &ResourceModel{UUID: types.StringValue(personUUID), Birth: birthBlk(t, &familio.DateRange{Year: 1}, "", "", nil)}
 
 		Expect(applyEventsToState(t.Context(), events, m)).To(BeEmpty())
 		Expect(m.Birth.IsNull()).To(BeTrue())

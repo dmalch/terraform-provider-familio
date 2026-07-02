@@ -50,6 +50,9 @@ resource "familio_marriage" "m" {
 
 data "familio_person" "dad" {
   uuid = familio_person.dad.uuid
+  # The child's birth event and the marriage's wedding event are what make dad's
+  # /events show a child and a spouse; without this the data read can race them.
+  depends_on = [familio_person.child, familio_marriage.m]
 }`,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("data.familio_person.dad", tfjsonpath.New("owner_id"), knownvalue.NotNull()),

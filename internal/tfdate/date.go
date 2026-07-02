@@ -76,22 +76,6 @@ func Block(desc string, requiresReplace bool) schema.SingleNestedAttribute {
 	}
 }
 
-// BlockPreserve builds a preserve-on-omit date attribute (Optional + Computed +
-// UseStateForUnknown): omitting it in config keeps the current value instead of
-// nulling it, matching the person resource's biography. Used inside the person's
-// life-event blocks, where a config that sets one facet (e.g. parents) must not
-// wipe the date it does not mention (see issue #22).
-func BlockPreserve(desc string) schema.SingleNestedAttribute {
-	return schema.SingleNestedAttribute{
-		Description:   desc + " Omitting it preserves the current value.",
-		Optional:      true,
-		Computed:      true,
-		PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
-		Validators:    []validator.Object{dateRangeValidator{}},
-		Attributes:    dateAttributes(),
-	}
-}
-
 // dateAttributes is the shared attribute map for both date-block variants.
 func dateAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{

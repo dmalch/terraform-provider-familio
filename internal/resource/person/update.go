@@ -35,13 +35,30 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 	}
 
+	// Life events are preserve-on-omit (issue #22): a block the config does not
+	// carry (null) is unmanaged and left untouched on familio, and within a
+	// managed block an omitted comment/place/parents is kept by merging from the
+	// person's current events. Fetch those once when any managed block changed.
+	birthChanged := !plan.Birth.IsNull() && !plan.Birth.Equal(state.Birth)
+	deathChanged := !plan.Death.IsNull() && !plan.Death.Equal(state.Death)
+	christeningChanged := !plan.Christening.IsNull() && !plan.Christening.Equal(state.Christening)
+
+	var events []familio.Event
+	if birthChanged || deathChanged || christeningChanged {
+		evs, err := r.client.GetPersonEvents(ctx, uuid)
+		if err != nil {
+			resp.Diagnostics.AddError("Cannot read familio_person events before update", err.Error())
+			return
+		}
+		events = evs
+	}
+
 	// The birth event carries its date, parents, place and comment; re-POSTing it
-	// upserts the person's single birth event in place (a full replace), so a
-	// change to any field of the birth block is applied without recreating the
-	// person. They are all re-sent together (the replace would clear an omitted
-	// one).
-	if !plan.Birth.Equal(state.Birth) {
-		bdate, bplace, bcomment, parents, d := birthParts(ctx, plan.Birth)
+	// upserts the person's single birth event in place (a full replace). Omitted
+	// facets are merged from the current birth event so setting a date does not
+	// strip the existing comment/parents.
+	if birthChanged {
+		bdate, bplace, bcomment, parents, d := birthPartsMerged(ctx, plan.Birth, familio.OwnBirthEvent(events, uuid))
 		resp.Diagnostics.Append(d...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -54,9 +71,9 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	// The death event is optional: upsert it when the block carries any info,
-	// delete it when the block is cleared.
-	if !plan.Death.Equal(state.Death) {
-		r.reconcileDeath(ctx, uuid, plan.Death, resp)
+	// delete it when a managed block is emptied.
+	if deathChanged {
+		r.reconcileDeath(ctx, uuid, plan.Death, events, resp)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -64,8 +81,8 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 
 	// The christening (baptism) event does not upsert (re-POSTing duplicates it),
 	// so reconcile by deleting any existing baptism event and recreating it.
-	if !plan.Christening.Equal(state.Christening) {
-		r.reconcileChristening(ctx, uuid, plan.Christening, resp)
+	if christeningChanged {
+		r.reconcileChristening(ctx, uuid, plan.Christening, events, resp)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -106,7 +123,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	// Refresh server-computed fields (names normalisation, timestamps, display
-	// name) after the writes above. Dates/parents already reflect the plan.
+	// name) after the writes above.
 	if basic, err := r.client.GetPersonBasic(ctx, uuid); err != nil {
 		resp.Diagnostics.AddWarning("Could not re-read familio_person after update", err.Error())
 	} else {
@@ -116,6 +133,20 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		resp.Diagnostics.AddWarning("Could not read familio_person display name", err.Error())
 	} else {
 		plan.DisplayName = types.StringValue(display.DisplayName)
+	}
+
+	// Re-read events so managed life-event blocks reflect the server truth
+	// (resolving any preserved/merged facets to concrete values in state). Only
+	// managed (non-null) blocks are refreshed; unmanaged ones stay null.
+	if birthChanged || deathChanged || christeningChanged {
+		if fresh, err := r.client.GetPersonEvents(ctx, uuid); err != nil {
+			resp.Diagnostics.AddWarning("Could not re-read familio_person events after update", err.Error())
+		} else {
+			resp.Diagnostics.Append(applyEventsToState(ctx, fresh, &plan)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
@@ -133,10 +164,11 @@ func basicChanged(plan, state *ResourceModel) bool {
 		!plan.Privacy.Equal(state.Privacy)
 }
 
-// reconcileDeath upserts the death event when the death block carries any info,
-// or deletes the existing death event when the block is cleared.
-func (r *Resource) reconcileDeath(ctx context.Context, uuid string, deathBlock types.Object, resp *resource.UpdateResponse) {
-	date, place, comment, d := lifeEventParts(ctx, deathBlock)
+// reconcileDeath upserts the death event when the (managed) death block carries
+// any info, or deletes the existing death event when the block is emptied.
+// Omitted place/comment are merged from the current death event (events).
+func (r *Resource) reconcileDeath(ctx context.Context, uuid string, deathBlock types.Object, events []familio.Event, resp *resource.UpdateResponse) {
+	date, place, comment, d := lifeEventPartsMerged(ctx, deathBlock, firstEventOfType(events, familio.EventDeath))
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -149,34 +181,22 @@ func (r *Resource) reconcileDeath(ctx context.Context, uuid string, deathBlock t
 		return
 	}
 
-	// death block cleared → delete the death event if one exists.
-	events, err := r.client.GetPersonEvents(ctx, uuid)
-	if err != nil {
-		resp.Diagnostics.AddError("Cannot read familio_person events before clearing death", err.Error())
-		return
-	}
-	for i := range events {
-		if events[i].Type == familio.EventDeath {
-			if err := r.client.DeleteEvent(ctx, uuid, events[i].ID()); err != nil {
-				resp.Diagnostics.AddError("Cannot delete familio_person death event", err.Error())
-			}
-			return
+	// death block emptied → delete the death event if one exists.
+	if ev := firstEventOfType(events, familio.EventDeath); ev != nil {
+		if err := r.client.DeleteEvent(ctx, uuid, ev.ID()); err != nil {
+			resp.Diagnostics.AddError("Cannot delete familio_person death event", err.Error())
 		}
 	}
 }
 
 // reconcileChristening rewrites the person's baptism event: it deletes any
 // existing baptism event(s) (the event is repeatable and does not upsert) and,
-// when the christening block carries any info, creates a fresh one.
-func (r *Resource) reconcileChristening(ctx context.Context, uuid string, christeningBlock types.Object, resp *resource.UpdateResponse) {
-	date, place, comment, d := lifeEventParts(ctx, christeningBlock)
+// when the (managed) christening block carries any info, creates a fresh one.
+// Omitted place/comment are merged from the current baptism event (events).
+func (r *Resource) reconcileChristening(ctx context.Context, uuid string, christeningBlock types.Object, events []familio.Event, resp *resource.UpdateResponse) {
+	date, place, comment, d := lifeEventPartsMerged(ctx, christeningBlock, firstEventOfType(events, familio.EventBaptism))
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
-		return
-	}
-	events, err := r.client.GetPersonEvents(ctx, uuid)
-	if err != nil {
-		resp.Diagnostics.AddError("Cannot read familio_person events before updating christening", err.Error())
 		return
 	}
 	for i := range events {

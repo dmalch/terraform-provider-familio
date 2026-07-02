@@ -29,15 +29,22 @@ MAINTENANCE:
 
 BUG FIXES:
 
-* **`familio_person` life events are now preserve-on-omit, like `biography` (#22).** The
-  `birth`, `death` and `christening` blocks — and their nested `date`, `place`, `comment` and
-  `parents` fields — are now `Optional + Computed` with `UseStateForUnknown`. Omitting a field
-  (or a whole block) in config now **preserves** the person's existing value instead of nulling
-  it. This makes "import an existing person, then enrich it" safe: a config that does not carry
-  every curated field no longer clobbers biographies, event comments or parent links on apply.
-  You can still change a value by setting it, and clear parents with `parents = []`. NOTE: as a
-  consequence — matching `biography` — omitting a block no longer deletes its event; remove such
-  events explicitly (e.g. in the familio UI) or with `terraform state rm` + a fresh apply.
+* **`familio_person` life events are now preserve-on-omit (#22).** Importing a person to enrich
+  it no longer clobbers curated data the config does not carry. Two levels of preservation:
+  * **Whole block** — omitting the `birth`, `death` or `christening` block leaves that event
+    **unmanaged and untouched** on familio (same contract as the `sources` block): the provider
+    neither reads it into state nor overwrites it. Declaring the block opts back in to managing
+    it. (As a result, `terraform import` brings life-event blocks in as unmanaged/null — you
+    declare the ones you want to manage.)
+  * **Within a managed block** — an omitted `comment`, `place` or `parents` is **preserved by
+    merging from the person's current event**, so setting a birth `date` no longer strips its
+    comment or parent links. These fields are `Optional + Computed` (`UseStateForUnknown`);
+    clear them explicitly with `""` / `[]`. `date` is authoritative within a managed block
+    (declare it when you manage the block).
+
+  To remove an event entirely, delete it in the familio UI. (A `Computed` nested-object
+  attribute triggers a perpetual "known after apply" plan in terraform-plugin-framework, so
+  whole-block/date preservation is handled in the resource's Read/Update rather than the schema.)
 
 ## 0.13.0
 

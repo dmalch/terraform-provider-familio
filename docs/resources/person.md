@@ -133,11 +133,11 @@ resource "familio_person" "pyotr" {
 ### Optional
 
 - `biography` (String) Free-text biography (the person's «tab=2» life description). Edited in place.
-- `birth` (Attributes) Birth event — date, place, comment and the person's parents. Edited in place. Omitting the whole block preserves the current event. (see [below for nested schema](#nestedatt--birth))
+- `birth` (Attributes) Birth event — date, place, comment and the person's parents. Edited in place. Preserve-on-omit: omitting the whole block leaves the person's existing event untouched (it is treated as unmanaged, like the sources block), so importing a person and enriching it never clobbers events the config does not carry. Within a block you do declare, omitted fields are likewise preserved. To remove an event, delete it in the familio UI. (see [below for nested schema](#nestedatt--birth))
 - `birth_first_name` (String) Given name at birth (maiden), if different.
 - `birth_last_name` (String) Surname at birth (maiden), if different.
-- `christening` (Attributes) Christening (baptism) event — familio's «Крещение»: date, place, comment. Omitting the whole block preserves the current event. (see [below for nested schema](#nestedatt--christening))
-- `death` (Attributes) Death event — date, place (familio's «Место смерти»), comment. Edited in place. Omitting the whole block preserves the current event. (see [below for nested schema](#nestedatt--death))
+- `christening` (Attributes) Christening (baptism) event — familio's «Крещение»: date, place, comment. Preserve-on-omit: omitting the whole block leaves the person's existing event untouched (it is treated as unmanaged, like the sources block), so importing a person and enriching it never clobbers events the config does not carry. Within a block you do declare, omitted fields are likewise preserved. To remove an event, delete it in the familio UI. (see [below for nested schema](#nestedatt--christening))
+- `death` (Attributes) Death event — date, place (familio's «Место смерти»), comment. Edited in place. Preserve-on-omit: omitting the whole block leaves the person's existing event untouched (it is treated as unmanaged, like the sources block), so importing a person and enriching it never clobbers events the config does not carry. Within a block you do declare, omitted fields are likewise preserved. To remove an event, delete it in the familio UI. (see [below for nested schema](#nestedatt--death))
 - `first_name` (String) Given name (имя).
 - `last_name` (String) Surname (фамилия). NOTE: familio normalises capitalisation server-side.
 - `patronymic` (String) Patronymic (отчество); familio's middleName.
@@ -156,10 +156,10 @@ resource "familio_person" "pyotr" {
 
 Optional:
 
-- `comment` (String) Free-text comment (примечание) on the birth event. Omitting it preserves the current value.
-- `date` (Attributes) Birth date. Omitting it preserves the current value. (see [below for nested schema](#nestedatt--birth--date))
-- `parents` (Set of String) UUIDs of this person's parents (0–2). familio stores them as gender-agnostic participants on this person's birth event, so order does not matter and a parent's father/mother role is inferred from their own gender. Each parent must already exist. Omitting it preserves the current parents (set to [] to clear them).
-- `place` (String) Birth place — familio's «Место рождения». The UUID of a familio settlement (the same id familio_settlement_persons / the familio_person data source speak). Omitting it preserves the current value.
+- `comment` (String) Free-text comment (примечание) on the birth event. Preserve-on-omit within a managed block.
+- `date` (Attributes) Birth date. (see [below for nested schema](#nestedatt--birth--date))
+- `parents` (Set of String) UUIDs of this person's parents (0–2). familio stores them as gender-agnostic participants on this person's birth event, so order does not matter and a parent's father/mother role is inferred from their own gender. Each parent must already exist. Preserve-on-omit: within a managed birth block, omitting this keeps the current parents (set to [] to clear them).
+- `place` (String) Birth place — familio's «Место рождения». The UUID of a familio settlement (the same id familio_settlement_persons / the familio_person data source speak). Preserve-on-omit within a managed block.
 
 <a id="nestedatt--birth--date"></a>
 ### Nested Schema for `birth.date`
@@ -187,9 +187,9 @@ Optional:
 
 Optional:
 
-- `comment` (String) Free-text comment on the christening event. Omitting it preserves the current value.
-- `date` (Attributes) Christening date. Omitting it preserves the current value. (see [below for nested schema](#nestedatt--christening--date))
-- `place` (String) Christening place — a familio settlement UUID. Omitting it preserves the current value.
+- `comment` (String) Free-text comment on the christening event. Preserve-on-omit within a managed block.
+- `date` (Attributes) Christening date. (see [below for nested schema](#nestedatt--christening--date))
+- `place` (String) Christening place — a familio settlement UUID. Preserve-on-omit within a managed block.
 
 <a id="nestedatt--christening--date"></a>
 ### Nested Schema for `christening.date`
@@ -217,9 +217,9 @@ Optional:
 
 Optional:
 
-- `comment` (String) Free-text comment on the death event. Omitting it preserves the current value.
-- `date` (Attributes) Death date. Omitting it preserves the current value. (see [below for nested schema](#nestedatt--death--date))
-- `place` (String) Death place — a familio settlement UUID. Omitting it preserves the current value.
+- `comment` (String) Free-text comment on the death event. Preserve-on-omit within a managed block.
+- `date` (Attributes) Death date. (see [below for nested schema](#nestedatt--death--date))
+- `place` (String) Death place — a familio settlement UUID. Preserve-on-omit within a managed block.
 
 <a id="nestedatt--death--date"></a>
 ### Nested Schema for `death.date`
