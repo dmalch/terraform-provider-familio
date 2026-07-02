@@ -3,6 +3,7 @@ package person
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -49,6 +50,27 @@ func (d *DataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp 
 				Computed:    true,
 				ElementType: types.StringType,
 			},
+			"marriages": schema.ListNestedAttribute{
+				Description: "This person's unions — one per spouse — each carrying the wedding-event " +
+					"(marriage) uuid. Pair spouse_uuid (or this person's uuid) with marriage_uuid to " +
+					"import a familio_marriage (\"<person_uuid>:<marriage_uuid>\").",
+				Computed: true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"spouse_uuid":   schema.StringAttribute{Computed: true, Description: "The spouse's person UUID."},
+						"marriage_uuid": schema.StringAttribute{Computed: true, Description: "UUID of the wedding event identifying this marriage."},
+					},
+				},
+			},
 		},
 	}
+}
+
+// marriageObjectType is the element type of the marriages list. It must mirror
+// the marriages nested attribute above.
+func marriageObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"spouse_uuid":   types.StringType,
+		"marriage_uuid": types.StringType,
+	}}
 }

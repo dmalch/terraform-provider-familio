@@ -72,57 +72,78 @@ func Block(desc string, requiresReplace bool) schema.SingleNestedAttribute {
 		Optional:      true,
 		PlanModifiers: mods,
 		Validators:    []validator.Object{dateRangeValidator{}},
-		Attributes: map[string]schema.Attribute{
-			"year": schema.Int64Attribute{
-				Description: "Year (e.g. 1900).",
-				Required:    true,
-			},
-			"month": schema.Int64Attribute{
-				Description: "Month, 1-12.",
-				Optional:    true,
-				Validators:  []validator.Int64{int64validator.Between(1, 12)},
-			},
-			"day": schema.Int64Attribute{
-				Description: "Day of month, 1-31.",
-				Optional:    true,
-				Validators:  []validator.Int64{int64validator.Between(1, 31)},
-			},
-			"circa": schema.BoolAttribute{
-				Description: "Approximate (\"circa\") date — familio's \"about\" type. " +
-					"Cannot be combined with range.",
-				Optional: true,
-			},
-			"range": schema.StringAttribute{
-				Description: "Open bound or range: before | after | between. Omit for a " +
-					"single date. \"between\" needs end_year (the second endpoint).",
-				Optional:   true,
-				Validators: []validator.String{stringvalidator.OneOf(familio.RangeBefore, familio.RangeAfter, familio.RangeBetween)},
-			},
-			"end_year": schema.Int64Attribute{
-				Description: "Second endpoint year (only with range = \"between\").",
-				Optional:    true,
-				Validators:  []validator.Int64{int64validator.AlsoRequires(rangePath)},
-			},
-			"end_month": schema.Int64Attribute{
-				Description: "Second endpoint month, 1-12 (only with range = \"between\").",
-				Optional:    true,
-				Validators:  []validator.Int64{int64validator.Between(1, 12), int64validator.AlsoRequires(rangePath)},
-			},
-			"end_day": schema.Int64Attribute{
-				Description: "Second endpoint day, 1-31 (only with range = \"between\").",
-				Optional:    true,
-				Validators:  []validator.Int64{int64validator.Between(1, 31), int64validator.AlsoRequires(rangePath)},
-			},
-			"end_circa": schema.BoolAttribute{
-				Description: "Accepted for cross-provider config symmetry, but familio has no " +
-					"per-endpoint approximation, so it cannot be combined with range.",
-				Optional: true,
-			},
-			"calendar": schema.StringAttribute{
-				Description: "Calendar: gregorian (default) | julian.",
-				Optional:    true,
-				Validators:  []validator.String{stringvalidator.OneOf(calendarGregorian, calendarJulian)},
-			},
+		Attributes:    dateAttributes(),
+	}
+}
+
+// BlockPreserve builds a preserve-on-omit date attribute (Optional + Computed +
+// UseStateForUnknown): omitting it in config keeps the current value instead of
+// nulling it, matching the person resource's biography. Used inside the person's
+// life-event blocks, where a config that sets one facet (e.g. parents) must not
+// wipe the date it does not mention (see issue #22).
+func BlockPreserve(desc string) schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
+		Description:   desc + " Omitting it preserves the current value.",
+		Optional:      true,
+		Computed:      true,
+		PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+		Validators:    []validator.Object{dateRangeValidator{}},
+		Attributes:    dateAttributes(),
+	}
+}
+
+// dateAttributes is the shared attribute map for both date-block variants.
+func dateAttributes() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"year": schema.Int64Attribute{
+			Description: "Year (e.g. 1900).",
+			Required:    true,
+		},
+		"month": schema.Int64Attribute{
+			Description: "Month, 1-12.",
+			Optional:    true,
+			Validators:  []validator.Int64{int64validator.Between(1, 12)},
+		},
+		"day": schema.Int64Attribute{
+			Description: "Day of month, 1-31.",
+			Optional:    true,
+			Validators:  []validator.Int64{int64validator.Between(1, 31)},
+		},
+		"circa": schema.BoolAttribute{
+			Description: "Approximate (\"circa\") date — familio's \"about\" type. " +
+				"Cannot be combined with range.",
+			Optional: true,
+		},
+		"range": schema.StringAttribute{
+			Description: "Open bound or range: before | after | between. Omit for a " +
+				"single date. \"between\" needs end_year (the second endpoint).",
+			Optional:   true,
+			Validators: []validator.String{stringvalidator.OneOf(familio.RangeBefore, familio.RangeAfter, familio.RangeBetween)},
+		},
+		"end_year": schema.Int64Attribute{
+			Description: "Second endpoint year (only with range = \"between\").",
+			Optional:    true,
+			Validators:  []validator.Int64{int64validator.AlsoRequires(rangePath)},
+		},
+		"end_month": schema.Int64Attribute{
+			Description: "Second endpoint month, 1-12 (only with range = \"between\").",
+			Optional:    true,
+			Validators:  []validator.Int64{int64validator.Between(1, 12), int64validator.AlsoRequires(rangePath)},
+		},
+		"end_day": schema.Int64Attribute{
+			Description: "Second endpoint day, 1-31 (only with range = \"between\").",
+			Optional:    true,
+			Validators:  []validator.Int64{int64validator.Between(1, 31), int64validator.AlsoRequires(rangePath)},
+		},
+		"end_circa": schema.BoolAttribute{
+			Description: "Accepted for cross-provider config symmetry, but familio has no " +
+				"per-endpoint approximation, so it cannot be combined with range.",
+			Optional: true,
+		},
+		"calendar": schema.StringAttribute{
+			Description: "Calendar: gregorian (default) | julian.",
+			Optional:    true,
+			Validators:  []validator.String{stringvalidator.OneOf(calendarGregorian, calendarJulian)},
 		},
 	}
 }

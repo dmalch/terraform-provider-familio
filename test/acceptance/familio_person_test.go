@@ -80,6 +80,73 @@ resource "familio_person" "test" {
 	})
 }
 
+// TestAccPerson_preserveOnOmit is the regression for #22: omitting a life-event
+// facet (or a whole block) must PRESERVE the existing value, not null it — the
+// same preserve-on-omit contract biography already has. Step 1 seeds birth
+// (date + comment + parents), death and christening. Step 2 rewrites only the
+// birth date and drops everything else from config; the apply must keep the
+// birth comment & parents, and the death and christening events, intact.
+func TestAccPerson_preserveOnOmit(t *testing.T) {
+	const parent = `
+resource "familio_person" "par" {
+  first_name = "АкцТест"
+  last_name  = "Родителев"
+  gender     = "male"
+  privacy    = "invisible"
+}
+`
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testProtoV6ProviderFactories,
+		CheckDestroy:             checkPersonsDestroyed(t),
+		Steps: []resource.TestStep{
+			{
+				Config: parent + `
+resource "familio_person" "keep" {
+  first_name  = "АкцТест"
+  last_name   = "Сохранов"
+  gender      = "male"
+  privacy     = "invisible"
+  birth = {
+    date    = { year = 1870 }
+    comment = "Родился в деревне."
+    parents = [familio_person.par.uuid]
+  }
+  death       = { date = { year = 1940 }, comment = "Умер дома." }
+  christening = { date = { year = 1870, month = 5 } }
+}`,
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("birth").AtMapKey("comment"), knownvalue.StringExact("Родился в деревне.")),
+					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("death").AtMapKey("comment"), knownvalue.StringExact("Умер дома.")),
+				},
+			},
+			{
+				// Config now carries ONLY the birth date — every other facet and the
+				// whole death/christening blocks are omitted. Pre-#22 this nulled the
+				// birth comment/parents and deleted death & christening. Now they are
+				// preserved, so this is at most an in-place update of the birth date.
+				Config: parent + `
+resource "familio_person" "keep" {
+  first_name = "АкцТест"
+  last_name  = "Сохранов"
+  gender     = "male"
+  privacy    = "invisible"
+  birth      = { date = { year = 1871 } }
+}`,
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("birth").AtMapKey("date").AtMapKey("year"), knownvalue.Int64Exact(1871)),
+					// Omitted facets preserved.
+					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("birth").AtMapKey("comment"), knownvalue.StringExact("Родился в деревне.")),
+					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("birth").AtMapKey("parents"), knownvalue.SetSizeExact(1)),
+					// Omitted whole blocks preserved.
+					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("death").AtMapKey("comment"), knownvalue.StringExact("Умер дома.")),
+					statecheck.ExpectKnownValue("familio_person.keep", tfjsonpath.New("christening").AtMapKey("date").AtMapKey("month"), knownvalue.Int64Exact(5)),
+				},
+			},
+		},
+	})
+}
+
 // TestAccPerson_approximateDates exercises the #5 date model: an approximate
 // (circa → "about") birth, a julian-calendar christening, and a "before" death
 // bound. The second step asserts an empty re-plan, proving the dates read back

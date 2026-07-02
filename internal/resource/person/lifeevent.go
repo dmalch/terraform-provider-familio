@@ -7,6 +7,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -59,52 +63,79 @@ func birthBlock() schema.SingleNestedAttribute {
 	attrs["parents"] = schema.SetAttribute{
 		Description: "UUIDs of this person's parents (0–2). familio stores them as gender-agnostic " +
 			"participants on this person's birth event, so order does not matter and a parent's " +
-			"father/mother role is inferred from their own gender. Each parent must already exist.",
-		Optional:    true,
-		ElementType: types.StringType,
-		Validators:  []validator.Set{setvalidator.SizeBetween(0, 2)},
+			"father/mother role is inferred from their own gender. Each parent must already exist. " +
+			"Omitting it preserves the current parents (set to [] to clear them).",
+		Optional:      true,
+		Computed:      true,
+		ElementType:   types.StringType,
+		PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
+		Validators:    []validator.Set{setvalidator.SizeBetween(0, 2)},
 	}
-	return schema.SingleNestedAttribute{
-		Description: "Birth event — date, place, comment and the person's parents. Edited in place.",
-		Optional:    true,
-		Attributes:  attrs,
-	}
+	return preserveBlock(
+		"Birth event — date, place, comment and the person's parents. Edited in place.",
+		attrs,
+	)
 }
 
 // deathBlock is the schema for the death event: date, place, comment.
 func deathBlock() schema.SingleNestedAttribute {
-	return schema.SingleNestedAttribute{
-		Description: "Death event — date, place (familio's «Место смерти»), comment. Setting any field " +
-			"records the event; clearing the whole block deletes it. Edited in place.",
-		Optional: true,
-		Attributes: lifeEventAttributes(
+	return preserveBlock(
+		"Death event — date, place (familio's «Место смерти»), comment. Edited in place.",
+		lifeEventAttributes(
 			"Death date.",
 			"Death place — a familio settlement UUID.",
 			"Free-text comment on the death event.",
 		),
-	}
+	)
 }
 
 // christeningBlock is the schema for the christening («Крещение») event.
 func christeningBlock() schema.SingleNestedAttribute {
-	return schema.SingleNestedAttribute{
-		Description: "Christening (baptism) event — familio's «Крещение»: date, place, comment. " +
-			"Setting any field records the event; clearing the whole block deletes it.",
-		Optional: true,
-		Attributes: lifeEventAttributes(
+	return preserveBlock(
+		"Christening (baptism) event — familio's «Крещение»: date, place, comment.",
+		lifeEventAttributes(
 			"Christening date.",
 			"Christening place — a familio settlement UUID.",
 			"Free-text comment on the christening event.",
 		),
+	)
+}
+
+// preserveBlock wraps a life-event attribute map in a preserve-on-omit nested
+// block (Optional + Computed + UseStateForUnknown): omitting the block in config
+// keeps the person's existing event instead of deleting it, matching biography.
+// This is what makes "import an existing person, then enrich it" safe — a config
+// that does not carry an event no longer clobbers it (issue #22). To change an
+// event, set it; to clear a facet, set that field explicitly ([] for parents).
+func preserveBlock(desc string, attrs map[string]schema.Attribute) schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
+		Description:   desc + " Omitting the whole block preserves the current event.",
+		Optional:      true,
+		Computed:      true,
+		PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+		Attributes:    attrs,
 	}
 }
 
-// lifeEventAttributes builds the shared date/place/comment attributes.
+// lifeEventAttributes builds the shared date/place/comment attributes. place and
+// comment are preserve-on-omit (Optional + Computed + UseStateForUnknown) so that
+// setting one facet of an event does not null the others — e.g. updating a date
+// keeps that event's comment (issue #22).
 func lifeEventAttributes(dateDesc, placeDesc, commentDesc string) map[string]schema.Attribute {
 	return map[string]schema.Attribute{
-		"date":    tfdate.Block(dateDesc, false),
-		"place":   schema.StringAttribute{Description: placeDesc, Optional: true},
-		"comment": schema.StringAttribute{Description: commentDesc, Optional: true},
+		"date": tfdate.BlockPreserve(dateDesc),
+		"place": schema.StringAttribute{
+			Description:   placeDesc + " Omitting it preserves the current value.",
+			Optional:      true,
+			Computed:      true,
+			PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+		},
+		"comment": schema.StringAttribute{
+			Description:   commentDesc + " Omitting it preserves the current value.",
+			Optional:      true,
+			Computed:      true,
+			PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+		},
 	}
 }
 

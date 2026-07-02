@@ -1,3 +1,37 @@
+## 0.14.0
+
+FEATURES:
+
+* **New `familio_tree` data source (#24).** Breadth-first crawls the persons connected to a
+  root person and returns each with normalized relations — `parents`, `spouses`, `children` —
+  in the terraform graph, replacing the out-of-band BFS crawl every tree onboarding needed to
+  harvest the UUIDs to import against. Bound the walk with `direction` (up / down / component),
+  `surname` (keep married-in branches out), and `depth`. Each spouse carries `marriage_uuid`,
+  so the crawl also yields ready-made `familio_marriage` import ids. Backed by `go-familio`
+  v0.3.0's `CrawlTree`.
+* **`familio_person` data source now exposes `marriages` (#23, #24).** A list of the person's
+  unions — `{ spouse_uuid, marriage_uuid }` — where `marriage_uuid` is the underlying wedding
+  event's uuid. This makes an existing union discoverable from terraform: pair it with the
+  person's uuid to `terraform import` a `familio_marriage` (`"<person_uuid>:<marriage_uuid>"`).
+  (Importing `familio_marriage` was already supported; the union uuid was just not discoverable
+  declaratively before.) Backed by `go-familio` v0.3.0's `DeriveRelations`.
+
+MAINTENANCE:
+
+* Bumped `go-familio` to v0.3.0.
+
+BUG FIXES:
+
+* **`familio_person` life events are now preserve-on-omit, like `biography` (#22).** The
+  `birth`, `death` and `christening` blocks — and their nested `date`, `place`, `comment` and
+  `parents` fields — are now `Optional + Computed` with `UseStateForUnknown`. Omitting a field
+  (or a whole block) in config now **preserves** the person's existing value instead of nulling
+  it. This makes "import an existing person, then enrich it" safe: a config that does not carry
+  every curated field no longer clobbers biographies, event comments or parent links on apply.
+  You can still change a value by setting it, and clear parents with `parents = []`. NOTE: as a
+  consequence — matching `biography` — omitting a block no longer deletes its event; remove such
+  events explicitly (e.g. in the familio UI) or with `terraform state rm` + a fresh apply.
+
 ## 0.13.0
 
 FEATURES:
