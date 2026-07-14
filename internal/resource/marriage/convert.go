@@ -30,19 +30,27 @@ func findWedding(events []familio.Event, uuid string) *familio.Event {
 	return nil
 }
 
-// commentValue returns the wedding comment to send, or "" when null/unknown.
-func commentValue(s types.String) string {
+// weddingEvent builds the wedding event to upsert, attaching the optional
+// place (settlement uuid) that the WeddingEvent constructor does not take.
+func weddingEvent(date *familio.DateRange, partnerA, partnerB string, comment, place types.String) familio.Event {
+	event := familio.WeddingEvent(date, partnerA, partnerB, strValue(comment))
+	event.Settlement = familio.SettlementRef(strValue(place))
+	return event
+}
+
+// strValue returns the comment/place value to send, or "" when null/unknown.
+func strValue(s types.String) string {
 	if s.IsNull() || s.IsUnknown() {
 		return ""
 	}
 	return s.ValueString()
 }
 
-// commentOrNull maps a wedding comment back to state, null when empty so an
-// omitted comment does not perpetually diff.
-func commentOrNull(comment string) types.String {
-	if comment == "" {
+// strOrNull maps a wedding comment/place back to state, null when empty so an
+// omitted attribute does not perpetually diff.
+func strOrNull(s string) types.String {
+	if s == "" {
 		return types.StringNull()
 	}
-	return types.StringValue(comment)
+	return types.StringValue(s)
 }

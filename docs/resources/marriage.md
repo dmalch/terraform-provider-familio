@@ -3,12 +3,12 @@
 page_title: "familio_marriage Resource - familio"
 subcategory: ""
 description: |-
-  A marriage between two persons in a familio.org family tree, modelled as the wedding event that links the partners. The marriage date and comment edit in place; changing the partners forces replacement (the partner pair is the marriage's identity).
+  A marriage between two persons in a familio.org family tree, modelled as the wedding event that links the partners. The marriage date, place and comment edit in place; changing the partners forces replacement (the partner pair is the marriage's identity).
 ---
 
 # familio_marriage (Resource)
 
-A marriage between two persons in a familio.org family tree, modelled as the wedding event that links the partners. The marriage date and comment edit in place; changing the partners forces replacement (the partner pair is the marriage's identity).
+A marriage between two persons in a familio.org family tree, modelled as the wedding event that links the partners. The marriage date, place and comment edit in place; changing the partners forces replacement (the partner pair is the marriage's identity).
 
 ## Example Usage
 
@@ -22,6 +22,10 @@ resource "familio_marriage" "marriage" {
     month = 5
     day   = 12
   }
+
+  # Wedding place — a familio settlement UUID (the same id a person's birth
+  # place takes), typically the parish where the marriage was recorded.
+  place = "40d1b180-b739-4ecb-9ee5-ced6fefcd0d8" # Нижняя Верея
 
   comment = "Венчание в Спасо-Преображенской церкви."
 }
@@ -38,12 +42,13 @@ resource "familio_marriage" "marriage" {
 
 - `comment` (String) Free-text comment on the wedding event. Edited in place.
 - `marriage_date` (Attributes) Marriage date. (see [below for nested schema](#nestedatt--marriage_date))
+- `place` (String) Wedding place — familio's «Место». The UUID of a familio settlement (the same id familio_person's birth place takes). Edited in place.
 
 ### Read-Only
 
 - `created_at` (String) Creation timestamp.
 - `updated_at` (String) Last update timestamp.
-- `uuid` (String) The underlying wedding-event UUID. familio has no event edit, so editing the date or comment recreates the wedding event — the UUID changes on such edits.
+- `uuid` (String) The underlying wedding-event UUID. familio has no event edit, so editing the date, place or comment recreates the wedding event — the UUID changes on such edits.
 
 <a id="nestedatt--marriage_date"></a>
 ### Nested Schema for `marriage_date`
