@@ -45,12 +45,15 @@ resource "familio_marriage" "test" {
 				},
 			},
 			{
-				// Editing the date and adding a comment must be an in-place update
-				// (the underlying wedding event is rebuilt), NOT a replacement.
+				// Editing the date and adding a comment + place (issue #30) must be
+				// an in-place update (the underlying wedding event is rebuilt), NOT a
+				// replacement. Нижняя Верея — the same real settlement the person
+				// place tests use.
 				Config: couple + `
 resource "familio_marriage" "test" {
   partners      = [familio_person.husband.uuid, familio_person.wife.uuid]
   marriage_date = { year = 1876 }
+  place         = "40d1b180-b739-4ecb-9ee5-ced6fefcd0d8"
   comment       = "повторное оглашение"
 }`,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -60,7 +63,21 @@ resource "familio_marriage" "test" {
 				},
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("familio_marriage.test", tfjsonpath.New("marriage_date").AtMapKey("year"), knownvalue.Int64Exact(1876)),
+					statecheck.ExpectKnownValue("familio_marriage.test", tfjsonpath.New("place"), knownvalue.StringExact("40d1b180-b739-4ecb-9ee5-ced6fefcd0d8")),
 					statecheck.ExpectKnownValue("familio_marriage.test", tfjsonpath.New("comment"), knownvalue.StringExact("повторное оглашение")),
+				},
+			},
+			{
+				// No permadiff: the structured settlement reads back to its uuid.
+				Config: couple + `
+resource "familio_marriage" "test" {
+  partners      = [familio_person.husband.uuid, familio_person.wife.uuid]
+  marriage_date = { year = 1876 }
+  place         = "40d1b180-b739-4ecb-9ee5-ced6fefcd0d8"
+  comment       = "повторное оглашение"
+}`,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 			},
 			{

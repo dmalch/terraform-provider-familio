@@ -17,12 +17,12 @@ import (
 func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "A marriage between two persons in a familio.org family tree, modelled as the " +
-			"wedding event that links the partners. The marriage date and comment edit in place; " +
+			"wedding event that links the partners. The marriage date, place and comment edit in place; " +
 			"changing the partners forces replacement (the partner pair is the marriage's identity).",
 		Attributes: map[string]schema.Attribute{
 			"uuid": schema.StringAttribute{
 				Description: "The underlying wedding-event UUID. familio has no event edit, so editing " +
-					"the date or comment recreates the wedding event — the UUID changes on such edits.",
+					"the date, place or comment recreates the wedding event — the UUID changes on such edits.",
 				Computed: true,
 			},
 			"partners": schema.SetAttribute{
@@ -37,6 +37,12 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 				},
 			},
 			"marriage_date": tfdate.Block("Marriage date.", false),
+
+			"place": schema.StringAttribute{
+				Description: "Wedding place — familio's «Место». The UUID of a familio settlement " +
+					"(the same id familio_person's birth place takes). Edited in place.",
+				Optional: true,
+			},
 
 			"comment": schema.StringAttribute{
 				Description: "Free-text comment on the wedding event. Edited in place.",

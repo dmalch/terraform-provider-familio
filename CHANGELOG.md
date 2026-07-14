@@ -1,3 +1,13 @@
+## 0.15.0
+
+FEATURES:
+
+* **`familio_marriage` gains an optional `place` (#30).** The wedding's settlement UUID —
+  familio's «Место» on the wedding event — expressed the same way `familio_person`'s birth/
+  death/christening places are. Edited in place like `comment` (though, as with any date/
+  comment edit, familio has no event edit, so the underlying wedding event is recreated and
+  its read-only `uuid` rolls).
+
 ## 0.14.1
 
 BUG FIXES:

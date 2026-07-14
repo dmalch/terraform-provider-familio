@@ -20,6 +20,23 @@ func TestPartnerListSorted(t *testing.T) {
 	Expect(got).To(Equal([]string{"aaa", "bbb"}))
 }
 
+func TestWeddingEventCarriesPlace(t *testing.T) {
+	RegisterTestingT(t)
+
+	event := weddingEvent(nil, "A", "B", types.StringValue("венчание"), types.StringValue("s1"))
+	Expect(event.SpouseUUIDs()).To(ConsistOf("A", "B"))
+	Expect(event.Comment).To(Equal("венчание"))
+	Expect(event.SettlementUUID()).To(Equal("s1"))
+}
+
+func TestWeddingEventWithoutPlace(t *testing.T) {
+	RegisterTestingT(t)
+
+	event := weddingEvent(nil, "A", "B", types.StringNull(), types.StringNull())
+	Expect(event.Settlement).To(BeNil(), "an omitted place must not send an empty settlement")
+	Expect(event.Comment).To(BeEmpty())
+}
+
 func TestFindWedding(t *testing.T) {
 	RegisterTestingT(t)
 	birthID, wedID := "b1", "w1"

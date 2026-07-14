@@ -8,5 +8,9 @@ resource "familio_marriage" "marriage" {
     day   = 12
   }
 
+  # Wedding place — a familio settlement UUID (the same id a person's birth
+  # place takes), typically the parish where the marriage was recorded.
+  place = "40d1b180-b739-4ecb-9ee5-ced6fefcd0d8" # Нижняя Верея
+
   comment = "Венчание в Спасо-Преображенской церкви."
 }

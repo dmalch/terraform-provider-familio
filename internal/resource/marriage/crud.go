@@ -30,7 +30,7 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		return
 	}
 
-	event := familio.WeddingEvent(date, partners[0], partners[1], commentValue(plan.Comment))
+	event := weddingEvent(date, partners[0], partners[1], plan.Comment, plan.Place)
 	created, err := r.client.CreateEvent(ctx, partners[0], event)
 	if err != nil {
 		resp.Diagnostics.AddError("Cannot create familio_marriage", err.Error())
@@ -85,14 +85,15 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 	state.Partners = partnerSet
 	state.MarriageDate = tfdate.ObjectFromRange(familio.RangeFromEventDate(event.Date))
-	state.Comment = commentOrNull(event.Comment)
+	state.Place = strOrNull(event.SettlementUUID())
+	state.Comment = strOrNull(event.Comment)
 	state.CreatedAt = types.StringValue(event.CreatedAt)
 	state.UpdatedAt = types.StringValue(event.UpdatedAt)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
-// Update edits the marriage date/comment in place. familio has no event PATCH
+// Update edits the marriage date/place/comment in place. familio has no event PATCH
 // and wedding events do not upsert on re-POST, so — exactly like the person
 // resource's christening (reconcileChristening) — an edit deletes the old
 // wedding event and creates a fresh one (giving it a new uuid). partners force
@@ -107,7 +108,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 
 	// Nothing event-defining changed (e.g. a computed-only refresh): carry the
 	// computed values forward without touching the API.
-	if plan.MarriageDate.Equal(state.MarriageDate) && plan.Comment.Equal(state.Comment) {
+	if plan.MarriageDate.Equal(state.MarriageDate) && plan.Comment.Equal(state.Comment) && plan.Place.Equal(state.Place) {
 		plan.UUID = state.UUID
 		plan.CreatedAt = state.CreatedAt
 		plan.UpdatedAt = state.UpdatedAt
@@ -133,7 +134,7 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		resp.Diagnostics.AddError("Cannot update familio_marriage", err.Error())
 		return
 	}
-	event := familio.WeddingEvent(date, partners[0], partners[1], commentValue(plan.Comment))
+	event := weddingEvent(date, partners[0], partners[1], plan.Comment, plan.Place)
 	created, err := r.client.CreateEvent(ctx, anchor, event)
 	if err != nil {
 		resp.Diagnostics.AddError("Cannot update familio_marriage", err.Error())
