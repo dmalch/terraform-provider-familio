@@ -54,5 +54,20 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 		plan.Sources = sources
 	}
 
+	// Tags are a separate sub-resource too; attach them after the person exists.
+	if desired, managed, d := desiredTags(ctx, plan.Tags); managed {
+		resp.Diagnostics.Append(d...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resp.Diagnostics.Append(r.writeTags(ctx, created.Basic.UUID, desired)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		tags, d := r.readTags(ctx, created.Basic.UUID, plan.Tags)
+		resp.Diagnostics.Append(d...)
+		plan.Tags = tags
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }

@@ -143,6 +143,7 @@ resource "familio_person" "pyotr" {
 - `patronymic` (String) Patronymic (отчество); familio's middleName.
 - `privacy` (String) Privacy. One of: visible_for_all, invisible. Defaults to visible_for_all.
 - `sources` (Attributes List) Source citations («Источники») for this person, managed as an authoritative set: the provider makes familio match this list exactly. Omit the block to leave the person's sources unmanaged; use `[]` to remove them all. Mutually exclusive with standalone familio_source resources for the same person. (see [below for nested schema](#nestedatt--sources))
+- `tags` (Set of Number) Tag ids («метки») attached to this person, managed as an authoritative set: the provider makes familio match it exactly. Omit the attribute to leave the person's tags unmanaged; use `[]` to remove them all. Elements are the **integer** ids of familio_tag resources (`familio_tag.x.id`) or of existing tags found via the familio_tags data source. Attaching a tag never deletes it — removing an id here only unassigns it from this person.
 
 ### Read-Only
 

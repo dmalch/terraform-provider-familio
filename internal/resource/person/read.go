@@ -64,5 +64,13 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		state.Sources = sources
 	}
 
+	// Same for tags: refresh only when managed, so an omitted attribute stays
+	// null and the provider doesn't claim a person's tags.
+	if !state.Tags.IsNull() {
+		tags, d := r.readTags(ctx, uuid, state.Tags)
+		resp.Diagnostics.Append(d...)
+		state.Tags = tags
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }

@@ -20,6 +20,8 @@ in the `go-familio` client module).
 | `familio_person` — full CRUD + import (incl. parents) | ✅ works |
 | `familio_marriage` — full CRUD + import | ✅ works |
 | `familio_event` — life-fact events (residence, education, military, …) | ✅ works |
+| `familio_tag` — the «метки» catalogue + the `tags` set on `familio_person` | ✅ works (Familio Plus) |
+| `familio_tags` data source (the account's tag catalogue, name → id) | ✅ works |
 
 `familio_marriage` is an association resource: a marriage is the `wedding` event linking
 two persons. Birth, death and christening (baptism / «Крещение») are life facts folded into

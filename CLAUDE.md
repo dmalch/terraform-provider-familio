@@ -52,7 +52,7 @@ are unset. Don't run them casually.
 - `github.com/dmalch/go-familio` (external module, package `familio`) — the **HTTP client**
   for familio.org's `/api/v2` surface. The only dependency that talks to the network. Knows
   nothing about Terraform types. Extracted from this repo; bump its version in `go.mod`.
-- `internal/resource/{person,marriage,event}/` and `internal/datasource/settlementpersons/`
+- `internal/resource/{person,marriage,event,source,tag}/` and `internal/datasource/`
   — Terraform-framework adapters. They translate plan/state ↔ `familio` client calls.
 - `internal/tfdate/` — shared bridge between familio's complex-date model and the nested
   `{year, month, day}` Terraform attribute. Used by person, marriage, and event.
@@ -94,6 +94,13 @@ familio represents relationships and life facts as **events**, not fields:
   the `parents` set (0–2 UUIDs) on `familio_person`.
 - `familio_event` covers the long tail of single-subject fact types (`location`/residence,
   `profession`, `education`, `militaryService`, awards, …).
+- **Tags («метки»)** are a *separate* top-level catalogue, not a person field: `familio_tag`
+  owns the label, and `familio_person.tags` is an authoritative set of tag ids linking to it.
+  Two things make tags unlike everything else here — a tag's id is a small **integer**, not a
+  uuid (so it is an `Int64` attribute and the import id is digits), and the tags endpoints have
+  **no `X-Base-Version`** optimistic lock, so tag edits are last-write-wins. Tags are Familio
+  Plus–gated: without a subscription only the tag familio flags `is_free` is usable, which the
+  provider surfaces rather than enforces.
 
 **In-place editing vs. replacement:** the person resource rebuilds its birth/death/
 christening events on Update, so those dates and `parents` edit in place. The marriage
