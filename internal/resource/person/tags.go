@@ -84,9 +84,41 @@ func tagDiff(current []familio.Tag, desired []int) (add, remove []int) {
 	return add, remove
 }
 
+// assignTagsOnCreate is writeTags' shortcut for a person that has just been
+// created: such a person provably carries no tags, so there is nothing to read
+// and nothing to unassign — every desired id is an addition. It returns the
+// resulting tags set directly, because the assign endpoint answers with the
+// person's refreshed tag list (unlike unassign, which answers 204 empty). That
+// makes a tagged create one request instead of three, which is worth the
+// separate path: the client is rate-limited to 2 req/s, so each saved call is
+// ~500ms of apply time.
+//
+// desired must come from a managed (non-null) attribute; an empty desired set
+// yields an empty set and issues no request at all.
+func (r *Resource) assignTagsOnCreate(ctx context.Context, uuid string, desired []int) (types.Set, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	if len(desired) == 0 {
+		set, d := types.SetValueFrom(ctx, types.Int64Type, []int64{})
+		diags.Append(d...)
+		return set, diags
+	}
+
+	assigned, err := r.client.AssignPersonTags(ctx, uuid, desired)
+	if err != nil {
+		diags.AddError("Cannot assign familio_person tags", err.Error())
+		return types.SetNull(types.Int64Type), diags
+	}
+
+	set, d := tagIDSet(ctx, assigned)
+	diags.Append(d...)
+	return set, diags
+}
+
 // writeTags makes the person's familio tag set match the desired ids
 // (authoritative): assign the missing, unassign the extra. Both calls take
-// batches, so this is at most two requests plus the current-state read.
+// batches, so this is at most two requests plus the current-state read. On
+// create use assignTagsOnCreate instead, which needs neither.
 func (r *Resource) writeTags(ctx context.Context, uuid string, desired []int) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -129,12 +161,16 @@ func (r *Resource) readTags(ctx context.Context, uuid string, prior types.Set) (
 		return types.SetNull(types.Int64Type), diags
 	}
 
+	return tagIDSet(ctx, tags)
+}
+
+// tagIDSet projects tags to their ids as a Terraform set. The id slice is
+// allocated non-nil so an empty tag list becomes an empty set rather than a null
+// one — null means "unmanaged", which is a different thing entirely.
+func tagIDSet(ctx context.Context, tags []familio.Tag) (types.Set, diag.Diagnostics) {
 	ids := make([]int64, 0, len(tags))
 	for _, t := range tags {
 		ids = append(ids, int64(t.ID))
 	}
-
-	set, d := types.SetValueFrom(ctx, types.Int64Type, ids)
-	diags.Append(d...)
-	return set, diags
+	return types.SetValueFrom(ctx, types.Int64Type, ids)
 }

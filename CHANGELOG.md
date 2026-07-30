@@ -1,3 +1,16 @@
+## 0.16.1
+
+ENHANCEMENTS:
+
+* **Creating a person with `tags` is now one request instead of three.** The create path was
+  reusing the general reconciler, which reads the person's current tags, writes the diff, then
+  reads the result back — but a person created moments earlier provably has no tags, and
+  familio's assign endpoint already answers with the resulting tag list (its unassign
+  counterpart is the one that returns 204 empty). So the before-read and the readback are both
+  dead weight on create, and `tags = []` now issues no tag request at all. The client is
+  rate-limited to 2 req/s, so this is roughly a second off each tagged person's create. No
+  schema change, and update/refresh behaviour is unchanged.
+
 ## 0.16.0
 
 FEATURES:

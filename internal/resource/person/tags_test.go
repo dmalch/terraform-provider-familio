@@ -98,6 +98,42 @@ func TestTagDiff(t *testing.T) {
 	})
 }
 
+// TestTagIDSet checks the projection used by both the create shortcut and the
+// refresh read, including the distinction that matters most: an empty tag list
+// must become an empty set, never a null one (null means "unmanaged").
+func TestTagIDSet(t *testing.T) {
+	t.Run("ids are projected", func(t *testing.T) {
+		RegisterTestingT(t)
+		set, diags := tagIDSet(t.Context(), []familio.Tag{
+			{TagInput: familio.TagInput{Name: "a"}, ID: 2832},
+			{TagInput: familio.TagInput{Name: "b"}, ID: 2833},
+		})
+		Expect(diags).To(BeEmpty())
+		Expect(set.Equal(tagSet(t, 2832, 2833))).To(BeTrue())
+	})
+
+	t.Run("no tags is an empty set, not null", func(t *testing.T) {
+		RegisterTestingT(t)
+		set, diags := tagIDSet(t.Context(), nil)
+		Expect(diags).To(BeEmpty())
+		Expect(set.IsNull()).To(BeFalse(), "null would mean unmanaged, which is a different state")
+		Expect(set.Elements()).To(BeEmpty())
+	})
+}
+
+// TestAssignTagsOnCreateIssuesNoRequests pins the point of the create shortcut:
+// with nothing to assign it must not touch the network at all. The client is nil
+// here, so any request would panic — that is the assertion.
+func TestAssignTagsOnCreateIssuesNoRequests(t *testing.T) {
+	RegisterTestingT(t)
+	r := &Resource{}
+
+	set, diags := r.assignTagsOnCreate(t.Context(), "p-1", nil)
+	Expect(diags).To(BeEmpty())
+	Expect(set.IsNull()).To(BeFalse())
+	Expect(set.Elements()).To(BeEmpty(), "`tags = []` on create is already satisfied by a new person")
+}
+
 // TestPersonModelTagsAttrType guards the model/schema pairing: `tags` must stay
 // a set of Int64, since familio tag ids are integers and a string set would
 // silently fail to decode.
