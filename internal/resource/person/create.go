@@ -55,17 +55,18 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	}
 
 	// Tags are a separate sub-resource too; attach them after the person exists.
+	// A brand-new person has no tags, and the assign call returns the resulting
+	// list, so this needs neither a before-read nor a readback.
 	if desired, managed, d := desiredTags(ctx, plan.Tags); managed {
 		resp.Diagnostics.Append(d...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		resp.Diagnostics.Append(r.writeTags(ctx, created.Basic.UUID, desired)...)
+		tags, d := r.assignTagsOnCreate(ctx, created.Basic.UUID, desired)
+		resp.Diagnostics.Append(d...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		tags, d := r.readTags(ctx, created.Basic.UUID, plan.Tags)
-		resp.Diagnostics.Append(d...)
 		plan.Tags = tags
 	}
 
