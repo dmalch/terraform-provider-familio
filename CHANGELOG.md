@@ -1,3 +1,32 @@
+## 0.16.2
+
+BUG FIXES:
+
+* **Reading credentials from a logged-in browser now works.** `browser` /
+  `FAMILIO_BROWSER` was effectively broken, in a way that looked like an expired
+  session: familio's `t` cookie holds a JSON object, and Go's `net/http` silently
+  drops the `"` bytes that are illegal in a cookie value, so the credential arrived
+  shredded and every call came back "not logged in". The underlying client now
+  percent-encodes such values, as a browser does. If you worked around this by
+  pasting `cookies` by hand, you no longer have to.
+
+ENHANCEMENTS:
+
+* **A version conflict is now distinguishable from a validation error.** familio
+  guards the person, biography and source-comment writes with an optimistic-lock
+  token; a stale one answers HTTP 409. The client previously flattened that into the
+  same opaque string as a 400, so a genuine "someone else edited this" collided with
+  "your input was rejected". Diagnostics for a stale write now say so.
+
+* Fewer requests per apply: the client takes its bearer from the session cookie it
+  already holds instead of fetching and scraping a familio.org HTML page on every
+  token refresh.
+
+DEPENDENCIES:
+
+* `github.com/dmalch/go-familio` v0.6.0 → **v1.0.1**. The library's exported surface
+  is now covered by semver; no provider code changed for the bump.
+
 ## 0.16.1
 
 ENHANCEMENTS:
