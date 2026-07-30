@@ -24,7 +24,7 @@ ENHANCEMENTS:
 
 DEPENDENCIES:
 
-* `github.com/dmalch/go-familio` v0.6.0 → **v1.0.0**. The library's exported surface
+* `github.com/dmalch/go-familio` v0.6.0 → **v1.0.1**. The library's exported surface
   is now covered by semver; no provider code changed for the bump.
 
 ## 0.16.1
