@@ -16,11 +16,13 @@ import (
 	dsperson "github.com/dmalch/terraform-provider-familio/internal/datasource/person"
 	dssettlement "github.com/dmalch/terraform-provider-familio/internal/datasource/settlement"
 	dssettlementpersons "github.com/dmalch/terraform-provider-familio/internal/datasource/settlementpersons"
+	dstags "github.com/dmalch/terraform-provider-familio/internal/datasource/tags"
 	dstree "github.com/dmalch/terraform-provider-familio/internal/datasource/tree"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/event"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/marriage"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/person"
 	"github.com/dmalch/terraform-provider-familio/internal/resource/source"
+	"github.com/dmalch/terraform-provider-familio/internal/resource/tag"
 )
 
 const (
@@ -141,6 +143,7 @@ func (p *FamilioProvider) Resources(_ context.Context) []func() resource.Resourc
 		marriage.NewMarriageResource,
 		event.NewEventResource,
 		source.NewSourceResource,
+		tag.NewTagResource,
 	}
 }
 
@@ -150,5 +153,6 @@ func (p *FamilioProvider) DataSources(_ context.Context) []func() datasource.Dat
 		dsperson.NewDataSource,
 		dssettlement.NewDataSource,
 		dstree.NewDataSource,
+		dstags.NewDataSource,
 	}
 }

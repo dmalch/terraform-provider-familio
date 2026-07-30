@@ -122,6 +122,25 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 	}
 
+	// Tags are an authoritative set when the attribute is present, on the same
+	// terms as sources: reconcile only on change, and a null plan attribute means
+	// "unmanaged" and leaves familio untouched.
+	if !plan.Tags.Equal(state.Tags) {
+		if desired, managed, d := desiredTags(ctx, plan.Tags); managed {
+			resp.Diagnostics.Append(d...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			resp.Diagnostics.Append(r.writeTags(ctx, uuid, desired)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			tags, d := r.readTags(ctx, uuid, plan.Tags)
+			resp.Diagnostics.Append(d...)
+			plan.Tags = tags
+		}
+	}
+
 	// Refresh server-computed fields (names normalisation, timestamps, display
 	// name) after the writes above.
 	if basic, err := r.client.GetPersonBasic(ctx, uuid); err != nil {

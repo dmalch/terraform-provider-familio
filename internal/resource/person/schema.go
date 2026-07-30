@@ -77,6 +77,8 @@ func (r *Resource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 			"christening": christeningBlock(),
 			"sources":     sourcesBlock(),
 
+			"tags": tagsAttribute(),
+
 			"biography": schema.StringAttribute{
 				Description:   "Free-text biography (the person's «tab=2» life description). Edited in place.",
 				Optional:      true,

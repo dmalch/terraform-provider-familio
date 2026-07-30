@@ -21,6 +21,7 @@ type ResourceModel struct {
 	Christening    types.Object `tfsdk:"christening"`
 	Biography      types.String `tfsdk:"biography"`
 	Sources        types.List   `tfsdk:"sources"`
+	Tags           types.Set    `tfsdk:"tags"`
 	DisplayName    types.String `tfsdk:"display_name"`
 	CreatedAt      types.String `tfsdk:"created_at"`
 	UpdatedAt      types.String `tfsdk:"updated_at"`

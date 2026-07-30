@@ -1,3 +1,38 @@
+## 0.16.0
+
+FEATURES:
+
+* **New `familio_tag` resource.** familio's «метки» — the coloured labels of the
+  `/profile/my-tags` catalogue, used to group persons. `name`, `color` and `description` all
+  edit in place. `color` is a palette **code** (`mint-mist`, `rose-mist`, …), not a hex, and is
+  validated against the seven familio accepts; the computed `hex` exposes the fill the web UI
+  paints it with for configs that render tags themselves.
+* **`familio_person` gains an authoritative `tags` attribute.** A set of tag ids the provider
+  makes familio match exactly — assigning the missing and unassigning the extra in at most two
+  requests. It follows the same convention as `sources`: omit the attribute to leave a person's
+  tags unmanaged, `[]` to remove them all. Removing an id only unassigns the tag; it never
+  deletes it.
+* **New `familio_tags` data source.** The account's tag catalogue, whose point is name → id
+  resolution: `data.familio_tags.all.by_name["Проверить в архиве"]` yields the id that `tags`
+  takes, so a config can reference tags it does not create without hardcoding an opaque number.
+  Also exposes `ids` and the full `tags` records.
+
+NOTES:
+
+* **`familio_tag` is keyed by an integer, not a uuid.** Alone among familio resources, a tag's
+  `id` is a small sequential number — so it is an `Int64` attribute, `familio_person.tags` is a
+  set of numbers, and `terraform import familio_tag.x 2832` takes digits. Passing a uuid is
+  rejected with a message saying so.
+* **Tags are a Familio Plus feature.** Without a subscription only one tag is usable — the one
+  familio flags via the computed `is_free`. The API returns the others regardless and Terraform
+  can manage them, so the provider surfaces the flag rather than enforcing the limit.
+* **No optimistic locking on tags.** Unlike `/basic`, `/biography` and source comments, the
+  familio tags endpoints carry no `X-Base-Version` header, so a concurrent edit to a tag is
+  last-write-wins rather than a 409 conflict.
+* **Deleting a `familio_tag` detaches it from every person**, including persons this
+  configuration does not manage.
+* Bumped `go-familio` to v0.6.0, which adds the tags client surface.
+
 ## 0.15.0
 
 FEATURES:
