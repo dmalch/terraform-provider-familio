@@ -58,8 +58,8 @@ func TestDesiredTags(t *testing.T) {
 
 func TestTagDiff(t *testing.T) {
 	current := []familio.Tag{
-		{TagInput: familio.TagInput{Name: "a"}, ID: 1},
-		{TagInput: familio.TagInput{Name: "b"}, ID: 2},
+		{Name: "a", ID: 1},
+		{Name: "b", ID: 2},
 	}
 
 	t.Run("no change issues nothing", func(t *testing.T) {
@@ -105,8 +105,8 @@ func TestTagIDSet(t *testing.T) {
 	t.Run("ids are projected", func(t *testing.T) {
 		RegisterTestingT(t)
 		set, diags := tagIDSet(t.Context(), []familio.Tag{
-			{TagInput: familio.TagInput{Name: "a"}, ID: 2832},
-			{TagInput: familio.TagInput{Name: "b"}, ID: 2833},
+			{Name: "a", ID: 2832},
+			{Name: "b", ID: 2833},
 		})
 		Expect(diags).To(BeEmpty())
 		Expect(set.Equal(tagSet(t, 2832, 2833))).To(BeTrue())
