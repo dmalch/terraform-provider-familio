@@ -1,6 +1,6 @@
 module github.com/dmalch/terraform-provider-familio
 
-go 1.26.0
+go 1.27.0
 
 require (
 	github.com/dmalch/go-familio v1.0.1
