@@ -1,5 +1,14 @@
 ## 0.16.2
 
+SECURITY:
+
+* `google.golang.org/grpc` v1.79.3 → v1.83.2 and `golang.org/x/text` v0.38.0 →
+  v0.41.0. govulncheck reports 0.16.1 as reachable by GO-2026-6061, GO-2026-6348
+  (HTTP/2 DATA-frame heap exhaustion), GO-2026-6443 (panic on a missing
+  `:authority`/`Host`) and GO-2026-5970 (`x/text` infinite loop). The gRPC findings
+  are in the server half Terraform talks to over a local plugin socket, so the
+  practical exposure is small, but every scanner flags the binary until it moves.
+
 BUG FIXES:
 
 * **Reading credentials from a logged-in browser now works.** `browser` /
@@ -26,6 +35,7 @@ DEPENDENCIES:
 
 * `github.com/dmalch/go-familio` v0.6.0 → **v1.0.1**. The library's exported surface
   is now covered by semver; no provider code changed for the bump.
+* Built with Go 1.27.
 
 ## 0.16.1
 
