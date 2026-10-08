@@ -1,3 +1,21 @@
+## 0.16.3
+
+BUG FIXES:
+
+* **`familio_source` survives its person being deleted outside Terraform.** familio answers a
+  missing person with HTTP 409 on its sources list. That is the optimistic-lock status, and
+  the client read it as a version conflict. A refresh therefore failed with "version
+  conflict (stale X-Base-Version)" instead of dropping the source from state, as the other
+  resources do. The client now recognizes familio's not-found body and reports not-found
+  (go-familio v1.0.2).
+
+* **The `familio_person` data source reports a missing person as not found**, instead of the
+  same misleading version conflict.
+
+* **Error messages are readable.** familio's API escapes every Cyrillic letter, so a
+  diagnostic showed `"message":"\u041f\u0435\u0440…"`. It now shows the text familio meant,
+  for example «Персона не найдена».
+
 ## 0.16.2
 
 SECURITY:
