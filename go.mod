@@ -3,7 +3,7 @@ module github.com/dmalch/terraform-provider-familio
 go 1.27.0
 
 require (
-	github.com/dmalch/go-familio v1.1.0
+	github.com/dmalch/go-familio v1.4.1
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0
 	github.com/hashicorp/terraform-plugin-go v0.31.0
